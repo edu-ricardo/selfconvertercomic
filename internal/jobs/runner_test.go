@@ -127,9 +127,14 @@ func TestRunnerConvertsAndAppliesOriginalAction(t *testing.T) {
 			src := e.pdf("Marvel/Guerras/Capítulo 01.pdf", 3)
 			e.scan()
 
-			var done atomic.Int64
+			var done, idle atomic.Int64
 			r := e.runner(convert.Converter{})
-			r.OnDone = func(int64) { done.Add(1) }
+			r.OnFinish = func(j Job) {
+				if j.Status == Done {
+					done.Add(1)
+				}
+			}
+			r.OnIdle = func() { idle.Add(1) }
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			go r.Run(ctx)
@@ -144,7 +149,13 @@ func TestRunnerConvertsAndAppliesOriginalAction(t *testing.T) {
 				t.Fatalf("job: %+v", jobs[0])
 			}
 			if done.Load() != 1 {
-				t.Fatal("OnDone não foi chamado")
+				t.Fatal("OnFinish não foi chamado")
+			}
+			for i := 0; idle.Load() == 0 && i < 100; i++ {
+				time.Sleep(10 * time.Millisecond)
+			}
+			if idle.Load() == 0 {
+				t.Fatal("OnIdle não foi chamado ao esvaziar a fila")
 			}
 			archived := filepath.Join(archive, "HD", "Marvel", "Guerras", "Capítulo 01.pdf")
 			switch action {

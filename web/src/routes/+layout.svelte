@@ -5,6 +5,7 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { Button } from '$lib/components/ui/button';
 	import { api } from '$lib/api';
+	import { taskCount, refreshTaskCount } from '$lib/task-count.svelte';
 	import LibraryIcon from '@lucide/svelte/icons/library-big';
 	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
@@ -33,6 +34,12 @@
 			.health()
 			.then((h) => (version = h.version))
 			.catch(() => (version = 'offline'));
+	});
+
+	$effect(() => {
+		refreshTaskCount();
+		const t = setInterval(refreshTaskCount, 15000);
+		return () => clearInterval(t);
 	});
 
 	const isActive = (href: string) => page.url.pathname.startsWith(href);
@@ -79,6 +86,12 @@
 				>
 					<item.icon class="size-4" />
 					{item.label}
+					{#if item.href === '/tarefas' && taskCount.open > 0}
+						<span
+							class="bg-destructive ml-auto rounded-full px-1.5 text-[11px] leading-5 font-semibold text-white"
+							aria-label="{taskCount.open} tarefas pendentes">{taskCount.open}</span
+						>
+					{/if}
 				</a>
 			{/each}
 		</nav>

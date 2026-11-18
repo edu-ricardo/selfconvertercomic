@@ -96,10 +96,19 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   **18 MB** devolvendo a memória ao sistema quando nenhuma capa está sendo gerada. **Não verificado:**
   capa de CBR em RAR de verdade (não há como gerar RAR aqui; validar com a biblioteca real no M7).
 
-### M5 — Tarefas e notificações
+### M5 — Tarefas e notificações ✅
 - Tela de tarefas (na E1: erros de conversão com "tentar de novo" / "ignorar").
 - ntfy: URL + tópico + eventos escolhidos (terminou, erro, tarefas pendentes); botão "enviar teste".
 - **Verificar:** erro de conversão gera tarefa; notificação chega num servidor ntfy de teste (`httptest`).
+- **Resultado (2026-11-18):** tabela `tasks` genérica (a E2 reaproveita para metadados e organização), no
+  máximo uma tarefa aberta por arquivo e tipo. Falha de conversão abre tarefa; sucesso posterior a resolve
+  sozinha; "Tentar de novo" volta o job para a fila; "Ignorar" fecha. Avisos pelo ntfy (publicação JSON,
+  UTF-8): um **resumo único quando a fila esvazia** em vez de um aviso por arquivo, respeitando "ao
+  terminar", "em erro" e "tarefas pendentes"; prioridade alta quando há erro; botão "Salvar e enviar
+  teste". Ponta a ponta com um PDF bom e um corrompido e um ntfy falso: 1 tarefa e o resumo "1 quadrinho
+  convertido · 1 conversão com erro · 1 tarefa aguardando você". Contador de tarefas no menu. Container:
+  23 MB de RAM. Bug corrigido: cancelar uma conversão antes de o conversor começar a marcava como erro.
+  **Não testado** com o ntfy real do Umbrel (não mandei aviso ao seu celular).
 
 ### M6 — Backup
 - Exportar sob demanda e agendado (diário, 7 cópias) via `VACUUM INTO` + configurações num `.zip` em

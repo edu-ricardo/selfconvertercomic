@@ -75,7 +75,7 @@ func (cv Converter) Convert(ctx context.Context, src, dst string, progress func(
 	conf.ValidationMode = model.ValidationRelaxed
 	pdf, err := api.ReadValidateAndOptimize(ctx, f, conf, nil)
 	if err != nil {
-		return res, fmt.Errorf("lendo o PDF: %w", err)
+		return res, fmt.Errorf("não foi possível ler o PDF (arquivo corrompido ou incompleto?): %w", err)
 	}
 	res.Pages = pdf.PageCount
 	if res.Pages == 0 {
@@ -180,7 +180,7 @@ func (cv Converter) FirstPage(ctx context.Context, src string, targetHeight int)
 	conf.ValidationMode = model.ValidationRelaxed
 	pdf, err := api.ReadValidateAndOptimize(ctx, f, conf, nil)
 	if err != nil {
-		return nil, fmt.Errorf("lendo o PDF: %w", err)
+		return nil, fmt.Errorf("não foi possível ler o PDF (arquivo corrompido ou incompleto?): %w", err)
 	}
 	if pdf.PageCount == 0 {
 		return nil, errors.New("o PDF não tem páginas")

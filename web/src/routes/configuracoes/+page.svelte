@@ -8,6 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
 	import { api, ApiError, type Settings } from '$lib/api';
+	import SendIcon from '@lucide/svelte/icons/send';
 
 	let s = $state<Settings | null>(null);
 	let errors = $state<Record<string, string>>({});
@@ -26,6 +27,25 @@
 			.then((v) => (s = v))
 			.catch((e) => (loadError = e.message));
 	});
+
+	let testing = $state(false);
+
+	// O teste usa as configurações salvas no servidor: salva antes de enviar.
+	async function testNtfy() {
+		if (!s) return;
+		testing = true;
+		try {
+			s = await api.putSettings($state.snapshot(s));
+			errors = {};
+			await api.testNotification();
+			toast.success('Notificação de teste enviada; confira o celular');
+		} catch (e) {
+			errors = e instanceof ApiError ? e.fields : {};
+			toast.error(e instanceof Error ? e.message : 'Falha ao enviar');
+		} finally {
+			testing = false;
+		}
+	}
 
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
@@ -147,7 +167,15 @@
 					<Label for="onTasks">Quando houver tarefas de ajuste</Label>
 					<Switch id="onTasks" bind:checked={s.notifications.onTasks} />
 				</div>
+				<p class="text-muted-foreground text-xs sm:col-span-2">
+					Um resumo único é enviado quando a fila de conversão esvazia (sem um aviso por arquivo).
+				</p>
 			</Card.Content>
+			<Card.Footer>
+				<Button type="button" variant="outline" size="sm" disabled={testing || !s.notifications.ntfyUrl} onclick={testNtfy}>
+					<SendIcon /> {testing ? 'Enviando…' : 'Salvar e enviar teste'}
+				</Button>
+			</Card.Footer>
 		</Card.Root>
 
 		<Card.Root>

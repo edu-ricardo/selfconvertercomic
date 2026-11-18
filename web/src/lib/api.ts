@@ -149,7 +149,29 @@ function query(f: CatalogFilter & { series?: string }): string {
 /** URL da miniatura; v=mtime invalida o cache do navegador quando o arquivo muda. */
 export const thumbUrl = (id: number, mtime?: number) => `/api/files/${id}/thumb${mtime ? `?v=${mtime}` : ''}`;
 
+export type TaskStatus = 'open' | 'resolved' | 'dismissed';
+
+export interface Task {
+	id: number;
+	kind: string;
+	libraryId: number;
+	libraryName: string;
+	relPath: string;
+	refId: number;
+	title: string;
+	detail: string;
+	status: TaskStatus;
+	createdAt: string;
+	resolvedAt: string | null;
+}
+
 export const api = {
+	listTasks: (status: TaskStatus | 'all' = 'open', limit = 100) =>
+		request<{ tasks: Task[]; open: number }>('GET', `/api/tasks?status=${status}&limit=${limit}`),
+	retryTask: (id: number) => request<{ queued: boolean }>('POST', `/api/tasks/${id}/retry`),
+	dismissTask: (id: number) => request<{ dismissed: boolean }>('POST', `/api/tasks/${id}/dismiss`),
+	testNotification: () => request<{ sent: boolean }>('POST', '/api/notifications/test'),
+
 	listSeries: (f: CatalogFilter) => request<Page<Series>>('GET', `/api/catalog/series?${query(f)}`),
 	listFiles: (f: CatalogFilter & { series?: string }) =>
 		request<Page<CatalogFile>>('GET', `/api/catalog/files?${query(f)}`),
