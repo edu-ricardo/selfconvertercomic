@@ -33,5 +33,5 @@ cd web && npm run dev
 docker build --build-arg VERSION=dev -t quadrinhoteca:dev .
 ```
 
-Variáveis: `QT_ADDR` (padrão `:8080`).
+Variáveis: `QT_ADDR` (padrão `:8080`) e `QT_DATA_DIR` (padrão `data`; na imagem, `/data`), onde ficam o banco SQLite e os demais dados.
 Publicação: criar a tag `vX.Y.Z` publica `ghcr.io/edu-ricardo/quadrinhoteca:X.Y.Z` (workflow `image.yml`).

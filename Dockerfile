@@ -20,9 +20,11 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 
 # 3) Imagem final: binário + poppler-utils (pdftoppm, fallback de renderização)
 FROM alpine:3.22
-RUN apk add --no-cache poppler-utils ca-certificates tzdata
+RUN apk add --no-cache poppler-utils ca-certificates tzdata  && mkdir /data && chown 1000:1000 /data
 COPY --from=go /out/quadrinhoteca /usr/local/bin/quadrinhoteca
-ENV QT_ADDR=:8080
+# /data: banco SQLite, cache e backups (no Umbrel: ${APP_DATA_DIR}/data)
+ENV QT_ADDR=:8080 QT_DATA_DIR=/data
+VOLUME /data
 USER 1000:1000
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1

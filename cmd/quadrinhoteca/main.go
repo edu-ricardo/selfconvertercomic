@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/db"
 	"github.com/edu-ricardo/selfconvertercomic/internal/server"
+	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 	"github.com/edu-ricardo/selfconvertercomic/web"
 )
 
@@ -20,10 +23,24 @@ var version = "dev"
 
 func main() {
 	addr := envOr("QT_ADDR", ":8080")
+	dataDir := envOr("QT_DATA_DIR", "data")
+
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		fatal("criando pasta de dados", err)
+	}
+	conn, err := db.Open(filepath.Join(dataDir, "quadrinhoteca.db"))
+	if err != nil {
+		fatal("abrindo banco", err)
+	}
+	defer conn.Close()
 
 	srv := &http.Server{
-		Addr:              addr,
-		Handler:           server.New(version, web.Files()),
+		Addr: addr,
+		Handler: server.New(server.Deps{
+			Version:  version,
+			UI:       web.Files(),
+			Settings: settings.NewStore(conn),
+		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -31,10 +48,9 @@ func main() {
 	defer stop()
 
 	go func() {
-		slog.Info("QuadrinhoTeca iniciada", "addr", addr, "version", version)
+		slog.Info("QuadrinhoTeca iniciada", "addr", addr, "data", dataDir, "version", version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("servidor HTTP falhou", "err", err)
-			os.Exit(1)
+			fatal("servidor HTTP falhou", err)
 		}
 	}()
 
@@ -44,6 +60,11 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("encerramento do servidor falhou", "err", err)
 	}
+}
+
+func fatal(msg string, err error) {
+	slog.Error(msg, "err", err)
+	os.Exit(1)
 }
 
 func envOr(key, fallback string) string {
