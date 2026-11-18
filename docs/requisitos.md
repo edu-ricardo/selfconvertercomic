@@ -72,3 +72,12 @@ Perguntas e respostas registradas por rodada. Itens marcados **[aberto]** ainda 
 | Guia dos Quadrinhos | Aceito o risco do scraping (bloqueio/mudança de layout); **ComicVine como plano B** |
 | Entregas | **Entrega 1:** conversão PDF→CBZ + catálogo. **Entrega 2:** organização + metadados. Requisitos levantados por completo agora e arquitetura pensada para o todo desde a entrega 1 |
 | Empacotamento | Seguir o padrão da loja [edu-ricardo/florencio-store](https://github.com/edu-ricardo/florencio-store) — ver [umbrel.md](umbrel.md) |
+
+### Rodada 5 — montagem, segurança das alterações e imagem (2026-11-18)
+
+| Tema | Decisão |
+|---|---|
+| Montagem das bibliotecas | **Bind amplo**: `/external` (todos os HDs) + `/storage`; bibliotecas cadastradas na UI |
+| Aplicar organização | **Prévia + aprovação** (antes/depois), com **histórico para desfazer** |
+| Duplicados | **Só listar na UI**; a app nunca apaga sozinha |
+| Arquitetura da imagem | **Só amd64** |

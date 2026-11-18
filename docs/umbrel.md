@@ -24,7 +24,7 @@ florencio-store-<app>/
 ## Imagem Docker
 
 O Umbrel não compila imagens: é preciso publicar no GHCR (`ghcr.io/edu-ricardo/<app>`) via GitHub Actions
-(`docker/build-push-action`, `platforms: linux/amd64,linux/arm64`, pacote público).
+(`docker/build-push-action`, `platforms: linux/amd64` (decisão: só amd64), pacote público).
 Ex.: `.github/workflows/opengym-coach-image.yml` da loja.
 
 ## Acesso às bibliotecas (várias pastas, vários discos)
@@ -38,7 +38,7 @@ Mecanismos disponíveis:
 
 **Proposta:** bind amplo — `${UMBREL_ROOT}/data/storage` → `/storage` e `${UMBREL_ROOT}/external` → `/external`
 (`create_host_path: false`), e a UI da app cadastra as bibliotecas como subpastas desses pontos.
-Um HD novo aparece automaticamente em `/external/<nome>`. **[aberto — confirmar na rodada 5]**
+Um HD novo aparece automaticamente em `/external/<nome>`. **Decidido na rodada 5.**
 
 Atenção: HDs em exFAT/NTFS não suportam hardlink nem `chown` (ver README da loja) — mover/renomear deve
 usar `rename` no mesmo disco e copiar+apagar entre discos.
