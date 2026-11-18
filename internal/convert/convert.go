@@ -168,6 +168,34 @@ func (cv Converter) Convert(ctx context.Context, src, dst string, progress func(
 	return res, nil
 }
 
+// FirstPage devolve a imagem da primeira página do PDF (usada como capa): a imagem embutida quando
+// possível, senão uma renderização em baixa resolução (altura ~targetHeight).
+func (cv Converter) FirstPage(ctx context.Context, src string, targetHeight int) ([]byte, error) {
+	f, err := os.Open(src)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	pdf, err := api.ReadValidateAndOptimize(ctx, f, conf, nil)
+	if err != nil {
+		return nil, fmt.Errorf("lendo o PDF: %w", err)
+	}
+	if pdf.PageCount == 0 {
+		return nil, errors.New("o PDF não tem páginas")
+	}
+	dims, err := pdf.PageDims(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if data, _, ok := extractPage(ctx, pdf, 1, dims[0].Width, dims[0].Height); ok {
+		return data, nil
+	}
+	cv.TargetHeight = targetHeight
+	return cv.render(ctx, src, 1, dims[0].Height)
+}
+
 // extractPage devolve os bytes originais da imagem quando a página é uma única imagem JPEG/PNG
 // (RGB ou tons de cinza) com a mesma proporção da página.
 func extractPage(ctx context.Context, pdf *model.Context, page int, pageW, pageH float64) ([]byte, string, bool) {

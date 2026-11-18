@@ -93,7 +93,75 @@ export interface Turbo {
 	until: string | null;
 }
 
+export type FileStatus = 'pending' | 'converting' | 'failed' | 'converted' | 'ready';
+export type Format = 'pdf' | 'cbz' | 'cbr';
+
+export interface CatalogFilter {
+	library?: number;
+	publisher?: string;
+	format?: Format | '';
+	status?: FileStatus | '';
+	q?: string;
+	offset?: number;
+	limit?: number;
+}
+
+export interface Series {
+	libraryId: number;
+	libraryName: string;
+	key: string;
+	name: string;
+	publisher: string;
+	count: number;
+	formats: Record<Format, number>;
+	coverFileId: number;
+}
+
+export interface CatalogFile {
+	id: number;
+	libraryId: number;
+	libraryName: string;
+	relPath: string;
+	format: Format;
+	size: number;
+	mtime: number;
+	publisher: string;
+	series: string;
+	seriesName: string;
+	title: string;
+	status: FileStatus;
+}
+
+export interface Page<T> {
+	items: T[];
+	total: number;
+}
+
+function query(f: CatalogFilter & { series?: string }): string {
+	const p = new URLSearchParams();
+	for (const [k, v] of Object.entries(f)) {
+		if (v !== undefined && v !== '' && v !== 0) p.set(k, String(v));
+	}
+	if (f.series !== undefined) p.set('series', f.series); // "" = raiz, é um valor válido
+	return p.toString();
+}
+
+/** URL da miniatura; v=mtime invalida o cache do navegador quando o arquivo muda. */
+export const thumbUrl = (id: number, mtime?: number) => `/api/files/${id}/thumb${mtime ? `?v=${mtime}` : ''}`;
+
 export const api = {
+	listSeries: (f: CatalogFilter) => request<Page<Series>>('GET', `/api/catalog/series?${query(f)}`),
+	listFiles: (f: CatalogFilter & { series?: string }) =>
+		request<Page<CatalogFile>>('GET', `/api/catalog/files?${query(f)}`),
+	publishers: (library?: number) =>
+		request<string[]>('GET', `/api/catalog/publishers${library ? `?library=${library}` : ''}`),
+	getFile: (id: number) =>
+		request<{ file: CatalogFile; path: string; readers: { kavita?: string; bookOrbit?: string } }>(
+			'GET',
+			`/api/files/${id}`
+		),
+	convertFile: (id: number) => request<{ queued: boolean }>('POST', `/api/files/${id}/convert`),
+
 	listJobs: (status: JobFilter = 'active', limit = 100) =>
 		request<{ jobs: Job[]; counts: Record<JobStatus, number>; turbo: Turbo }>(
 			'GET',

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,6 +27,20 @@ var formats = map[string]string{".pdf": "pdf", ".cbz": "cbz", ".cbr": "cbr"}
 type fileState struct {
 	id          int64
 	size, mtime int64
+	derived     bool // publisher/series/title já preenchidos
+}
+
+// Derive calcula editora, série e título a partir do caminho relativo (regra da entrega 1):
+// editora = primeira pasta (se o arquivo não está na raiz), série = pasta do arquivo, título = nome
+// sem extensão.
+func Derive(relPath string) (publisher, series, title string) {
+	dir, name := path.Split(relPath)
+	series = strings.TrimSuffix(dir, "/")
+	title = strings.TrimSuffix(name, path.Ext(name))
+	if series != "" {
+		publisher, _, _ = strings.Cut(series, "/")
+	}
+	return publisher, series, title
 }
 
 // Scan varre a biblioteca e sincroniza a tabela files: insere novos, atualiza alterados (tamanho ou
@@ -83,7 +98,7 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 		rel = filepath.ToSlash(rel)
 		seen[rel] = true
 		size, mtime := info.Size(), info.ModTime().UnixNano()
-		if k, ok := known[rel]; !ok || k.size != size || k.mtime != mtime {
+		if k, ok := known[rel]; !ok || k.size != size || k.mtime != mtime || !k.derived {
 			changed = append(changed, found{rel, format, size, mtime})
 		}
 		return nil
@@ -103,18 +118,24 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 	defer tx.Rollback()
 
 	upsert, err := tx.PrepareContext(ctx, `
-		INSERT INTO files (library_id, rel_path, format, size, mtime) VALUES (?, ?, ?, ?, ?)
+		INSERT INTO files (library_id, rel_path, format, size, mtime, publisher, series, title)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (library_id, rel_path) DO UPDATE SET format = excluded.format, size = excluded.size,
-			mtime = excluded.mtime, changed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`)
+			mtime = excluded.mtime, publisher = excluded.publisher, series = excluded.series,
+			title = excluded.title, changed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`)
 	if err != nil {
 		return res, err
 	}
 	defer upsert.Close()
 	for _, f := range changed {
-		if _, err := upsert.ExecContext(ctx, lib.ID, f.rel, f.format, f.size, f.mtime); err != nil {
+		pub, series, title := Derive(f.rel)
+		if _, err := upsert.ExecContext(ctx, lib.ID, f.rel, f.format, f.size, f.mtime, pub, series, title); err != nil {
 			return res, err
 		}
-		if _, ok := known[f.rel]; ok {
+		if k, ok := known[f.rel]; ok {
+			if k.size == f.size && k.mtime == f.mtime {
+				continue // só preencheu os campos derivados (banco migrado)
+			}
 			res.Updated++
 		} else {
 			res.Added++
@@ -144,7 +165,7 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 }
 
 func (s *Store) knownFiles(ctx context.Context, libID int64) (map[string]fileState, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, rel_path, size, mtime FROM files WHERE library_id = ?", libID)
+	rows, err := s.db.QueryContext(ctx, "SELECT id, rel_path, size, mtime, title <> '' FROM files WHERE library_id = ?", libID)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +174,7 @@ func (s *Store) knownFiles(ctx context.Context, libID int64) (map[string]fileSta
 	for rows.Next() {
 		var rel string
 		var f fileState
-		if err := rows.Scan(&f.id, &rel, &f.size, &f.mtime); err != nil {
+		if err := rows.Scan(&f.id, &rel, &f.size, &f.mtime, &f.derived); err != nil {
 			return nil, err
 		}
 		m[rel] = f

@@ -155,3 +155,17 @@ func TestScanPerformance10k(t *testing.T) {
 		t.Errorf("revarredura: %+v (limite 5 s)", r)
 	}
 }
+
+func TestDerive(t *testing.T) {
+	cases := []struct{ rel, pub, series, title string }{
+		{"Marvel/guerras_secretas/1984/Capítulo 01.pdf", "Marvel", "Marvel/guerras_secretas/1984", "Capítulo 01"},
+		{"Marvel/Guerra Civil (2022).cbr", "Marvel", "Marvel", "Guerra Civil (2022)"},
+		{"solto.cbz", "", "", "solto"},
+	}
+	for _, c := range cases {
+		pub, series, title := Derive(c.rel)
+		if pub != c.pub || series != c.series || title != c.title {
+			t.Errorf("Derive(%q) = %q, %q, %q", c.rel, pub, series, title)
+		}
+	}
+}

@@ -206,6 +206,22 @@ func (r *Runner) EnqueueLibrary(ctx context.Context, libraryID int64) int {
 	return r.enqueue(ctx, libraryID, false, 0)
 }
 
+// ErrHasCBZ indica que o PDF já tem um CBZ com o mesmo nome ao lado.
+var ErrHasCBZ = errors.New("já existe um CBZ com o mesmo nome")
+
+// EnqueueFile enfileira um PDF específico (ação manual na tela do arquivo). Devolve false se o
+// arquivo já tem uma conversão ativa.
+func (r *Runner) EnqueueFile(ctx context.Context, libraryID int64, absPath, relPath string, size, mtime int64) (bool, error) {
+	if _, err := os.Stat(cbzPath(absPath)); err == nil {
+		return false, ErrHasCBZ
+	}
+	ok, err := r.store.Enqueue(ctx, libraryID, relPath, size, mtime, false)
+	if ok {
+		r.Wake()
+	}
+	return ok, err
+}
+
 func (r *Runner) enqueue(ctx context.Context, libraryID int64, auto bool, stableBefore int64) int {
 	cands, err := r.store.candidates(ctx, libraryID, auto, stableBefore)
 	if err != nil {

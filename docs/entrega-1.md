@@ -78,12 +78,23 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   simultâneas, expira sozinho). Bugs achados no caminho: o pdfcpu entrava em `panic` sem `$HOME` no
   container (corrigido com `api.DisableConfigDir()`) e um `panic` derrubava a app (agora vira erro do job).
 
-### M4 — Catálogo
+### M4 — Catálogo ✅
 - Miniaturas sob demanda com cache; grade de capas por série com paginação no servidor.
 - Filtros: biblioteca, editora, formato, status; busca FTS5 por série/título.
 - Página de detalhe com ações (converter, abrir no Kavita/BookOrbit pela URL base configurada).
 - **Verificar:** com 10 mil itens, listagem paginada responde em < 200 ms; miniatura gerada uma vez só;
   filtros combinados corretos (teste de API).
+- **Resultado (2026-11-18):** com 10 mil arquivos (2 mil com histórico de conversão), 1ª página de séries em
+  **11 ms**, última em 18 ms, filtro por status em 60 ms, busca em 2 ms. Busca FTS5 sem acentos e por
+  prefixo ("capitulo" acha "Capítulo"). Status por arquivo: não convertido, convertendo, erro, convertido
+  (PDF com CBZ ao lado), pronto (CBZ/CBR). Capas: 1ª página por nome (CBZ/CBR, inclusive `.cbr` que é ZIP),
+  imagem da página 1 do PDF (renderização só se preciso), 300 px, cache por tamanho+mtime, no máximo 2
+  gerações simultâneas e pedidos repetidos juntados; PDF real de 22 MB em 0,13 s (1,5 ms do cache).
+  Banco do M3 migrado: a varredura seguinte preencheu série/editora/título. Os links do Kavita e do BookOrbit
+  abrem só o endereço base configurado (sem link direto para o quadrinho). No container: catálogo, busca e
+  capas ok; a RAM ficou em 125 MB depois de gerar capas (cada página é decodificada inteira) e caiu para
+  **18 MB** devolvendo a memória ao sistema quando nenhuma capa está sendo gerada. **Não verificado:**
+  capa de CBR em RAR de verdade (não há como gerar RAR aqui; validar com a biblioteca real no M7).
 
 ### M5 — Tarefas e notificações
 - Tela de tarefas (na E1: erros de conversão com "tentar de novo" / "ignorar").
