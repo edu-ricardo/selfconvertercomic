@@ -2,7 +2,7 @@
 
 ## Projeto
 
-**selfconvertercomic** — aplicação self-hosted para o homelab (Umbrel) que:
+**QuadrinhoTeca** (repositório `selfconvertercomic`) — aplicação self-hosted para o homelab (Umbrel) que:
 
 1. Converte quadrinhos em PDF para CBZ/CBR.
 2. Organiza a biblioteca de quadrinhos.

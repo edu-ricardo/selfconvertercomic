@@ -1,4 +1,4 @@
-# selfconvertercomic
+# QuadrinhoTeca
 
 Aplicação self-hosted para homelab (Umbrel) que converte quadrinhos em PDF para CBZ/CBR,
 organiza a biblioteca e, opcionalmente, busca metadados em português.

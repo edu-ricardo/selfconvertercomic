@@ -81,3 +81,15 @@ Perguntas e respostas registradas por rodada. Itens marcados **[aberto]** ainda 
 | Aplicar organização | **Prévia + aprovação** (antes/depois), com **histórico para desfazer** |
 | Duplicados | **Só listar na UI**; a app nunca apaga sozinha |
 | Arquitetura da imagem | **Só amd64** |
+
+### Rodada 6 — metadados, catálogo, avisos e nome (2026-11-18)
+
+| Tema | Decisão |
+|---|---|
+| Identificação da edição | Automática usando **metadados internos do PDF** (título, autor, assunto, palavras-chave, XMP), **nome do arquivo** e **pastas**; pedir confirmação **só quando houver dúvida** |
+| Fila de confirmação | **Tela de tarefas** com tudo que precisa de confirmação/ajuste, para resolver aos poucos |
+| Campos de metadados | Série, número, título, ano, editora brasileira, roteiristas, desenhistas, sinopse, capa e vínculo com a edição original (EUA) |
+| ComicVine | Usuário **tem chave de API** (informada nas configurações) |
+| Catálogo | **Grade de capas por série**; filtros por **editora**, **formato** e **status**; **link** para abrir no Kavita/BookOrbit (sem leitor embutido) |
+| Notificações | **ntfy**, configurável: ao terminar, só em erro e/ou quando houver tarefas de ajuste pendentes |
+| Nome do app | **QuadrinhoTeca** (id sugerido na loja: `florencio-store-quadrinhoteca`) |
