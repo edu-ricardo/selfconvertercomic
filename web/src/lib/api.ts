@@ -165,7 +165,29 @@ export interface Task {
 	resolvedAt: string | null;
 }
 
+export interface BackupInfo {
+	name: string;
+	size: number;
+	createdAt: string;
+}
+
+async function restoreBackup(file: File) {
+	const res = await fetch('/api/backups/restore', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/zip' },
+		body: file
+	});
+	const data = await res.json().catch(() => ({}));
+	if (!res.ok) throw new ApiError(data.error ?? `HTTP ${res.status}`, res.status);
+	return data as { restored: string; safetyBackup: string };
+}
+
 export const api = {
+	listBackups: () => request<BackupInfo[]>('GET', '/api/backups'),
+	createBackup: () => request<BackupInfo>('POST', '/api/backups'),
+	restoreBackup,
+	backupUrl: (name: string) => `/api/backups/${encodeURIComponent(name)}`,
+
 	listTasks: (status: TaskStatus | 'all' = 'open', limit = 100) =>
 		request<{ tasks: Task[]; open: number }>('GET', `/api/tasks?status=${status}&limit=${limit}`),
 	retryTask: (id: number) => request<{ queued: boolean }>('POST', `/api/tasks/${id}/retry`),
