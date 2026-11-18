@@ -23,12 +23,15 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
 
 ## Marcos
 
-### M0 — Esqueleto e imagem Docker
+### M0 — Esqueleto e imagem Docker ✅
 - `go.mod`, `cmd/quadrinhoteca`, `GET /api/health`, frontend SvelteKit mínimo embutido.
 - `Dockerfile` multi-stage, `Makefile` (ou `justfile`) com `dev`, `test`, `build`, `docker`.
 - Workflow do GitHub Actions: testes em PR; publica `ghcr.io/edu-ricardo/quadrinhoteca:<versão>` em tag.
 - **Verificar:** `docker run` responde 200 em `/api/health` e serve a UI; imagem < 100 MB; RAM ociosa < 50 MB
   (`docker stats`); CI verde.
+- **Resultado (2026-11-18):** imagem **60 MB** (amd64, com poppler-utils 25.04), **9 MB de RAM** ociosa,
+  health 200, UI 200, roda como `1000:1000`, healthcheck `healthy`. CI ainda não executado no GitHub.
+  Sem `Makefile`: os comandos estão no README (a máquina de desenvolvimento é Windows).
 
 ### M1 — Banco, configurações e casca da UI
 - Migrações SQLite versionadas; tabela de configurações com os padrões decididos.
