@@ -13,7 +13,9 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
+	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
+	"github.com/edu-ricardo/selfconvertercomic/internal/tasks"
 )
 
 // Deps são as dependências das rotas.
@@ -28,6 +30,8 @@ type Deps struct {
 	Runner    *jobs.Runner
 	Catalog   *catalog.Store
 	Thumbs    *catalog.Thumbnailer
+	Tasks     *tasks.Store
+	Notifier  *notify.Notifier
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.
@@ -41,6 +45,7 @@ func New(d Deps) http.Handler {
 	d.registerLibraries(mux)
 	d.registerJobs(mux)
 	d.registerCatalog(mux)
+	d.registerTasks(mux)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rota não encontrada")
 	})

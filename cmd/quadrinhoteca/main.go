@@ -17,8 +17,10 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
+	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/server"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
+	"github.com/edu-ricardo/selfconvertercomic/internal/tasks"
 	"github.com/edu-ricardo/selfconvertercomic/web"
 )
 
@@ -61,7 +63,27 @@ func main() {
 	})
 	// Varredura nova → procura PDFs para converter; conversão pronta → revarre para o CBZ aparecer.
 	scanner.OnScan = func(library.Library, library.Result) { runner.EnqueueEligible(ctx) }
-	runner.OnDone = scanner.Enqueue
+	taskStore := tasks.NewStore(conn)
+	notifier := &notify.Notifier{Settings: settingsStore, OpenTasks: taskStore.CountOpen}
+	// Conversão terminou → revarre (CBZ aparece), abre/fecha a tarefa e conta para o aviso.
+	runner.OnFinish = func(j jobs.Job) {
+		failed := j.Status == jobs.Failed
+		if !failed {
+			scanner.Enqueue(j.LibraryID)
+		}
+		if err := taskStore.FromConversion(context.WithoutCancel(ctx), j.LibraryID, j.RelPath, j.ID, failed, j.Error); err != nil {
+			slog.Error("atualizando tarefas", "err", err)
+		}
+		notifier.Record(!failed)
+	}
+	// Fila vazia → um resumo único pelo ntfy (se configurado).
+	runner.OnIdle = func() {
+		go func() {
+			if err := notifier.Flush(context.WithoutCancel(ctx)); err != nil {
+				slog.Warn("notificação não enviada", "err", err)
+			}
+		}()
+	}
 	go scanner.Run(ctx)
 	go runner.Run(ctx)
 
@@ -78,6 +100,8 @@ func main() {
 			Runner:    runner,
 			Catalog:   catalog.NewStore(conn),
 			Thumbs:    &catalog.Thumbnailer{Dir: filepath.Join(dataDir, "cache", "thumbs")},
+			Tasks:     taskStore,
+			Notifier:  notifier,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

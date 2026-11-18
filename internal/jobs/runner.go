@@ -33,8 +33,12 @@ type Runner struct {
 	settings *settings.Store
 	conv     Converter
 	libPath  LibraryPath
-	// OnDone é chamado quando um job termina com sucesso (usado para revarrer a biblioteca).
-	OnDone func(libraryID int64)
+	// OnFinish é chamado quando um job termina com sucesso ou falha (não em cancelamento nem quando
+	// volta para a fila no desligamento). Usado para revarrer a biblioteca, abrir/fechar tarefas e
+	// contar as conversões para a notificação.
+	OnFinish func(Job)
+	// OnIdle é chamado quando a fila esvazia (nada em execução nem aguardando).
+	OnIdle func()
 
 	tick time.Duration
 	now  func() time.Time
@@ -138,6 +142,9 @@ func (r *Runner) dispatch(ctx context.Context, wg *sync.WaitGroup) {
 			if idle {
 				// O PDF inteiro passa pela memória; devolve-a ao sistema quando não há mais conversões.
 				debug.FreeOSMemory()
+				if n, err := r.store.activeCount(context.WithoutCancel(ctx)); err == nil && n == 0 && r.OnIdle != nil {
+					r.OnIdle()
+				}
 			}
 			r.Wake()
 		}()
@@ -255,11 +262,27 @@ func (r *Runner) execute(jctx, appCtx context.Context, j Job) {
 	// Gravações finais usam um contexto próprio para sobreviver ao cancelamento do job.
 	bg := context.WithoutCancel(jctx)
 	fail := func(msg string) {
+		// Cancelado pelo usuário ou desligamento antes de o conversor rodar não é erro.
+		r.mu.Lock()
+		userCancelled := r.cancelled[j.ID]
+		r.mu.Unlock()
+		if userCancelled {
+			j.Status, j.Error = Cancelled, "cancelado"
+			_ = r.store.finish(bg, j)
+			return
+		}
+		if appCtx.Err() != nil {
+			_ = r.store.requeue(bg, j.ID)
+			return
+		}
 		j.Status, j.Error = Failed, msg
 		if err := r.store.finish(bg, j); err != nil {
 			slog.Error("gravando job", "id", j.ID, "err", err)
 		}
 		slog.Warn("conversão falhou", "arquivo", j.RelPath, "erro", msg)
+		if r.OnFinish != nil {
+			r.OnFinish(j)
+		}
 	}
 
 	root, libName, err := r.libPath(jctx, j.LibraryID)
@@ -320,8 +343,8 @@ func (r *Runner) execute(jctx, appCtx context.Context, j Job) {
 	}
 	slog.Info("conversão concluída", "arquivo", j.RelPath, "páginas", res.Pages,
 		"extraídas", res.Extracted, "renderizadas", res.Rendered)
-	if r.OnDone != nil {
-		r.OnDone(j.LibraryID)
+	if r.OnFinish != nil {
+		r.OnFinish(j)
 	}
 }
 

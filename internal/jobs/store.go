@@ -177,6 +177,13 @@ func (s *Store) resetRunning(ctx context.Context) (int64, error) {
 	return res.RowsAffected()
 }
 
+// activeCount devolve quantos jobs estão na fila ou em execução.
+func (s *Store) activeCount(ctx context.Context) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, "SELECT count(*) FROM jobs WHERE status IN ('queued', 'running')").Scan(&n)
+	return n, err
+}
+
 // Retry recoloca na fila um job que falhou ou foi cancelado.
 func (s *Store) Retry(ctx context.Context, id int64) error {
 	res, err := s.db.ExecContext(ctx, `
