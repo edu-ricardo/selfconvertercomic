@@ -22,4 +22,4 @@ Formato de saída: **CBZ** (ZIP) é aberto e suportado universalmente; CBR (RAR)
 proprietária para *criar* arquivos — recomendação é gerar só CBZ.
 
 **Decisão (2026-11-18): Opção A — Go no backend + SvelteKit estático no frontend, saída somente CBZ.**
-Biblioteca de PDF (MuPDF embutido vs. `pdftoppm`) e design system ainda **[aberto]**.
+Design system: **shadcn-svelte** (decidido). Biblioteca de PDF: MuPDF/`go-fitz` descartado por ser AGPL-3.0 + CGO; candidato **pdfcpu** (Go puro, Apache-2.0) + `pdftoppm` como fallback — **[aberto até o teste]**.

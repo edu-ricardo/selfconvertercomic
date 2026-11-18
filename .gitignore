@@ -10,3 +10,6 @@ Thumbs.db
 # Ambiente
 .env
 *.log
+
+# Amostras locais de quadrinhos (não versionar)
+samples/

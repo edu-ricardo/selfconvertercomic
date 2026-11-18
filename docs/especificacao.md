@@ -109,11 +109,11 @@ Banco: SQLite em modo WAL (FTS5 para busca).
 
 ## 10. Pontos em aberto
 
-1. **Biblioteca de PDF (licença).** MuPDF (`go-fitz`) é **AGPL-3.0** e exige CGO. Alternativa proposta:
+1. **Biblioteca de PDF (licença) — [aberto, aguardando teste com PDFs reais em `samples/`].** MuPDF (`go-fitz`) é **AGPL-3.0** e exige CGO. Alternativa proposta:
    **pdfcpu** (Go puro, Apache-2.0) para extrair as imagens sem recompressão + **`pdftoppm`** (Poppler,
    processo externo) só para renderizar páginas problemáticas. Validar com PDFs reais da biblioteca.
-2. **Design system** da UI (Tailwind + componentes próprios vs. shadcn-svelte).
-3. **Limite de requisições** e cache para o Guia dos Quadrinhos.
-4. **Padrões iniciais:** tempo de estabilidade (sugestão: 2 min), intervalo de revarredura (sugestão: 6 h),
-   frequência e retenção do backup (sugestão: diário, 7 cópias, em `${APP_DATA_DIR}/data/backups`).
-5. **Repositório do código** público ou privado (o pacote no GHCR precisa ser público para o Umbrel baixar).
+2. ~~Design system~~ — **decidido:** shadcn-svelte (sobre Tailwind), tema claro/escuro.
+3. ~~Limite do Guia dos Quadrinhos~~ — **decidido:** 1 requisição a cada 2 s, cache local das páginas por 30 dias.
+4. ~~Padrões iniciais~~ — **decidido:** estabilidade 2 min, revarredura a cada 6 h, backup diário com 7 cópias
+   em `${APP_DATA_DIR}/data/backups` (todos ajustáveis na UI).
+5. ~~Repositório~~ — **decidido:** código **público** no GitHub; imagem pública no GHCR.
