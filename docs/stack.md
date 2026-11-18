@@ -21,4 +21,5 @@ próprios (ou shadcn-svelte) para manter padronização.
 Formato de saída: **CBZ** (ZIP) é aberto e suportado universalmente; CBR (RAR) exige ferramenta
 proprietária para *criar* arquivos — recomendação é gerar só CBZ.
 
-**Decisão: [aberto]**
+**Decisão (2026-11-18): Opção A — Go no backend + SvelteKit estático no frontend, saída somente CBZ.**
+Biblioteca de PDF (MuPDF embutido vs. `pdftoppm`) e design system ainda **[aberto]**.

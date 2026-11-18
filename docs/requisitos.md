@@ -25,6 +25,40 @@ Objetivo secundário (se possível):
 
 Perguntas e respostas registradas por rodada. Itens marcados **[aberto]** ainda não foram decididos.
 
-### Rodada 1 — escopo e contexto
+### Rodada 1 — escopo e stack (2026-11-18)
 
-**[aberto]**
+| Tema | Decisão |
+|---|---|
+| Formato de saída | **Somente CBZ** (CBR descartado: criação exige RAR proprietário) |
+| Gatilho da conversão | **Automática por pasta monitorada** + **manual pela interface** (sem varredura agendada) |
+| Organização | **Renomear arquivos**, **estrutura de pastas**, **detectar duplicados**, **catálogo na UI** |
+| Stack | **Go + SvelteKit (estático)** — ver [stack.md](stack.md) |
+
+### Rodada 2 — conversão e fontes (2026-11-18)
+
+| Tema | Decisão |
+|---|---|
+| PDF original após converter | **Configurável** (manter / mover p/ pasta de arquivo / apagar) |
+| Geração das páginas | **Extrair imagens embutidas sem recompressão**; renderizar só páginas sem imagem única |
+| Padrão atual da biblioteca | Inspecionado (somente leitura) — ver "Estado atual da biblioteca" abaixo |
+| Fontes de metadados pt-BR | **Guia dos Quadrinhos** (scraping, sem API) + **ComicVine** (API em inglês, dados da edição original) |
+
+#### Estado atual da biblioteca (inspeção em 2026-11-18)
+
+- Local: `/External/Untitled/comics` (HD USB externo no Umbrel). Subpastas: `Darkhorse`, `DC Comics`,
+  `Marvel`, `Manga` (vazia), `Downloads` (vazia).
+- Estrutura irregular: às vezes `Editora/Série/Ano/` (ex.: `Marvel/guerras_secretas/1984/`), às vezes
+  `Editora/Agrupamento/` com arquivos soltos (ex.: `Marvel/Grandes Eventos/`).
+- Nomes inconsistentes: `Capítulo 01.pdf` (série só no nome da pasta),
+  `Mark Millar - Guerra Civil (2022).cbr`, `Unknown author - Batman - ... Vol. 1.cbr`.
+- Formatos encontrados: PDF, CBR e CBZ.
+- Leitores no Umbrel: BookOrbit e Kavita (loja própria `florencio-store-*`).
+
+### Rodada 3 — organização e metadados (2026-11-18)
+
+| Tema | Decisão |
+|---|---|
+| Pasta com vários PDFs (capítulos) | **1 CBZ por PDF** (cada PDF é uma edição) |
+| Padrão de organização | **Template configurável** com variáveis (ex.: `{editora}/{serie} ({ano})/{serie} ({ano}) #{numero}`) |
+| CBR já existentes | **Manter como estão** (só organizar/renomear, sem reempacotar) |
+| Gravação de metadados | **ComicInfo.xml dentro do CBZ** |
