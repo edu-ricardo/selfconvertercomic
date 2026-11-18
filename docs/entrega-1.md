@@ -45,13 +45,19 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   Verificado: valor salvo pela UI sobrevive a reinício (binário e container), 375 px sem rolagem
   horizontal, imagem 67 MB, 7 MB de RAM.
 
-### M2 — Bibliotecas e varredura
+### M2 — Bibliotecas e varredura ✅
 - CRUD de bibliotecas; navegador de pastas restrito a `/external` e `/storage` (sem escapar com `..`).
 - Varredura incremental (tamanho + mtime), registra PDF/CBZ/CBR; watcher + revarredura a cada 6 h.
 - Biblioteca indisponível quando o disco some (RF-04); volta sozinha.
 - **Verificar:** testes com pasta temporária (criar/alterar/remover arquivo é refletido); 10 mil arquivos
   falsos varridos em < 30 s e revarredura sem mudanças em < 5 s; remover a pasta raiz marca "indisponível"
   sem apagar o catálogo.
+- **Resultado (2026-11-18):** 10 mil arquivos varridos em **0,23 s**, revarredura sem mudanças em
+  **0,14 s**. Pasta ausente — ou vazia com catálogo cheio (disco desmontado) — marca "indisponível" sem
+  apagar nada, e a checagem a cada minuto a reativa quando o disco volta, refazendo as observações do
+  watcher. Rajadas de eventos se juntam (espera de 3 s). Caminhos fora de `QT_LIBRARY_ROOTS` (inclusive via
+  link simbólico) e bibliotecas sobrepostas são recusados. Testado também no container Linux (inotify),
+  com 10 MB de RAM. Tela **Bibliotecas** com seletor de pastas, contagem por formato e "varrer agora".
 
 ### M3 — Fila de jobs e conversão PDF → CBZ
 - Fila persistente (status, progresso, erro, tentar de novo); 1 worker; **modo turbo** com N workers e

@@ -8,5 +8,5 @@
 <EmptyState
 	icon={LibraryIcon}
 	title="Nenhuma biblioteca ainda"
-	text="O cadastro de bibliotecas e a varredura chegam no próximo marco (M2)."
+	text="Cadastre uma pasta em Bibliotecas. A grade de capas chega no marco M4."
 />
