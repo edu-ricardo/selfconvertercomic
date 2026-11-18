@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
@@ -32,6 +34,13 @@ func newTestServer(t *testing.T, version string) http.Handler {
 
 func newTestServerWithRoots(t *testing.T, version string, roots library.Roots) http.Handler {
 	t.Helper()
+	_, h := newTestServerConn(t, version, roots)
+	return h
+}
+
+// newTestServerConn também devolve o banco, para os testes prepararem dados.
+func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.DB, http.Handler) {
+	t.Helper()
 	conn, err := db.Open(filepath.Join(t.TempDir(), "qt.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +49,7 @@ func newTestServerWithRoots(t *testing.T, version string, roots library.Roots) h
 	libs := library.NewStore(conn)
 	st := settings.NewStore(conn)
 	js := jobs.NewStore(conn)
-	return New(Deps{
+	return conn, New(Deps{
 		Version:   version,
 		UI:        testUI(),
 		Settings:  st,
@@ -48,6 +57,8 @@ func newTestServerWithRoots(t *testing.T, version string, roots library.Roots) h
 		Roots:     roots,
 		Scanner:   library.NewManager(libs, func() time.Duration { return time.Hour }),
 		Jobs:      js,
+		Catalog:   catalog.NewStore(conn),
+		Thumbs:    &catalog.Thumbnailer{Dir: t.TempDir()},
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
 			l, err := libs.Get(ctx, id)
 			return l.Path, l.Name, err

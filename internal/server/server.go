@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
@@ -25,6 +26,8 @@ type Deps struct {
 	Scanner   *library.Manager
 	Jobs      *jobs.Store
 	Runner    *jobs.Runner
+	Catalog   *catalog.Store
+	Thumbs    *catalog.Thumbnailer
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.
@@ -37,6 +40,7 @@ func New(d Deps) http.Handler {
 	mux.HandleFunc("PUT /api/settings", d.putSettings)
 	d.registerLibraries(mux)
 	d.registerJobs(mux)
+	d.registerCatalog(mux)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rota não encontrada")
 	})

@@ -4,7 +4,9 @@ go 1.27.0
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/nwaples/rardecode/v2 v2.4.6
 	github.com/pdfcpu/pdfcpu v0.16.4
+	golang.org/x/image v0.48.0
 	modernc.org/sqlite v1.62.0
 )
 
@@ -20,9 +22,8 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/image v0.47.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect

@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
@@ -75,6 +76,8 @@ func main() {
 			Scanner:   scanner,
 			Jobs:      jobStore,
 			Runner:    runner,
+			Catalog:   catalog.NewStore(conn),
+			Thumbs:    &catalog.Thumbnailer{Dir: filepath.Join(dataDir, "cache", "thumbs")},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
