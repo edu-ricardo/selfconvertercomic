@@ -107,11 +107,10 @@ web/                     → SvelteKit (adapter-static) + Tailwind
 
 Banco: SQLite em modo WAL (FTS5 para busca).
 
-## 10. Pontos em aberto
+## 10. Pontos em aberto (todos decididos)
 
-1. **Biblioteca de PDF (licença) — [aberto, aguardando teste com PDFs reais em `samples/`].** MuPDF (`go-fitz`) é **AGPL-3.0** e exige CGO. Alternativa proposta:
-   **pdfcpu** (Go puro, Apache-2.0) para extrair as imagens sem recompressão + **`pdftoppm`** (Poppler,
-   processo externo) só para renderizar páginas problemáticas. Validar com PDFs reais da biblioteca.
+1. ~~Biblioteca de PDF~~ — **decidido:** pdfcpu (Go puro, Apache-2.0) para extrair as imagens; `pdftoppm` como
+   fallback de renderização (ainda a exercitar). Teste em [stack.md](stack.md#teste-do-pdfcpu-2026-11-18).
 2. ~~Design system~~ — **decidido:** shadcn-svelte (sobre Tailwind), tema claro/escuro.
 3. ~~Limite do Guia dos Quadrinhos~~ — **decidido:** 1 requisição a cada 2 s, cache local das páginas por 30 dias.
 4. ~~Padrões iniciais~~ — **decidido:** estabilidade 2 min, revarredura a cada 6 h, backup diário com 7 cópias

@@ -22,4 +22,20 @@ Formato de saída: **CBZ** (ZIP) é aberto e suportado universalmente; CBR (RAR)
 proprietária para *criar* arquivos — recomendação é gerar só CBZ.
 
 **Decisão (2026-11-18): Opção A — Go no backend + SvelteKit estático no frontend, saída somente CBZ.**
-Design system: **shadcn-svelte** (decidido). Biblioteca de PDF: MuPDF/`go-fitz` descartado por ser AGPL-3.0 + CGO; candidato **pdfcpu** (Go puro, Apache-2.0) + `pdftoppm` como fallback — **[aberto até o teste]**.
+Design system: **shadcn-svelte** (decidido). Biblioteca de PDF: MuPDF/`go-fitz` descartado por ser AGPL-3.0 + CGO; **pdfcpu** (Go puro, Apache-2.0) + `pdftoppm` como fallback — decidido após o teste abaixo.
+
+## Teste do pdfcpu (2026-11-18)
+
+pdfcpu v0.16.4 (CLI), amostra `Vingadores Mundiais #21.pdf` (17,5 MB, 24 páginas, PDF 1.4, gerado por adultpdf):
+
+| Verificação | Resultado |
+|---|---|
+| Estrutura | 1 imagem por página, JPEG (`DCTDecode`), 1280×1968, tamanho da página = tamanho da imagem |
+| Metadados internos | Título/autor/assunto **vazios** (só produtor e data) — identificação dependerá de nome e pastas |
+| Extração `pdfcpu extract -m image` | 24 arquivos, **0,16 s**, todos JPEG válidos |
+| Perda | Nenhuma: imagens somam 17,48 MB vs. PDF 17,50 MB (fluxo JPEG copiado sem recompressão) |
+
+**Decisão:** adotar **pdfcpu** (biblioteca Go, sem CGO) para extração. Manter `pdftoppm` (poppler-utils)
+como fallback para páginas que não sejam "uma imagem JPEG/PNG por página" (texto vetorial, várias imagens
+por página, JBIG2/CCITT). O fallback ainda **não foi exercitado**: validar quando surgir um PDF desse tipo
+(amostras novas em `samples/`, fora do git).
