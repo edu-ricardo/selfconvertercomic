@@ -117,6 +117,9 @@ func (m *Manager) Forget(id int64) {
 	}
 }
 
+// EnqueueAll pede a varredura de todas as bibliotecas (ex.: depois de restaurar um backup).
+func (m *Manager) EnqueueAll(ctx context.Context) { m.enqueueAll(ctx) }
+
 func (m *Manager) enqueueAll(ctx context.Context) {
 	libs, err := m.store.List(ctx)
 	if err != nil {

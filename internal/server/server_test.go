@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/backup"
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
@@ -63,6 +64,7 @@ func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.
 		Thumbs:    &catalog.Thumbnailer{Dir: t.TempDir()},
 		Tasks:     tasks.NewStore(conn),
 		Notifier:  &notify.Notifier{Settings: st},
+		Backups:   &backup.Manager{DB: conn, Dir: t.TempDir(), Settings: st, Version: version},
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
 			l, err := libs.Get(ctx, id)
 			return l.Path, l.Name, err

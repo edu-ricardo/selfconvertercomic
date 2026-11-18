@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/backup"
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
@@ -84,8 +85,25 @@ func main() {
 			}
 		}()
 	}
+	backups := &backup.Manager{
+		DB:       conn,
+		Dir:      filepath.Join(dataDir, "backups"),
+		Settings: settingsStore,
+		Version:  version,
+		// Restaurar com conversões rodando perderia o resultado delas.
+		CanRestore: func(ctx context.Context) error {
+			c, err := jobStore.Counts(ctx)
+			if err == nil && c[jobs.Running] > 0 {
+				err = backup.ErrBusy
+			}
+			return err
+		},
+		// O catálogo restaurado pode estar desatualizado em relação aos discos: revarre tudo.
+		AfterRestore: func() { scanner.EnqueueAll(ctx) },
+	}
 	go scanner.Run(ctx)
 	go runner.Run(ctx)
+	go backups.Run(ctx)
 
 	srv := &http.Server{
 		Addr: addr,
@@ -102,6 +120,7 @@ func main() {
 			Thumbs:    &catalog.Thumbnailer{Dir: filepath.Join(dataDir, "cache", "thumbs")},
 			Tasks:     taskStore,
 			Notifier:  notifier,
+			Backups:   backups,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

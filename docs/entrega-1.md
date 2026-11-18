@@ -110,11 +110,20 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   23 MB de RAM. Bug corrigido: cancelar uma conversão antes de o conversor começar a marcava como erro.
   **Não testado** com o ntfy real do Umbrel (não mandei aviso ao seu celular).
 
-### M6 — Backup
+### M6 — Backup ✅
 - Exportar sob demanda e agendado (diário, 7 cópias) via `VACUUM INTO` + configurações num `.zip` em
   `/data/backups`; baixar pela UI; restaurar a partir de arquivo enviado.
 - **Verificar:** exportar → apagar banco → restaurar → catálogo e configurações idênticos (teste
   automatizado).
+- **Resultado (2026-11-18):** `.zip` com `manifest.json` e cópia do banco feita com `VACUUM INTO` (sem parar
+  a app), nome `quadrinhoteca-AAAAMMDD-HHMMSS-mmm.zip`. Restauração pela API de backup do SQLite sobre o banco
+  em uso (sem reiniciar), depois de validar manifesto, `integrity_check` e versão de esquema (backup de
+  versão mais nova é recusado; de versão mais velha é migrado). Antes de restaurar, guarda um backup de
+  segurança do estado atual; recusa enquanto houver conversão rodando; depois revarre as bibliotecas.
+  Backup diário automático e retenção (7 cópias). Teste "exportar → apagar banco → restaurar": configurações,
+  bibliotecas, arquivos, fila, tarefas e busca idênticos. No container: backup baixado, **volume de dados
+  apagado**, instalação limpa, restauração pela API → tudo de volta, 17 MB de RAM. Bug achado no caminho:
+  dois backups no mesmo segundo colidiam (acontecia ao restaurar logo depois de um backup manual).
 
 ### M7 — Empacotamento e instalação no Umbrel
 - App `florencio-store-quadrinhoteca` na loja (porta 8821, binds `/external` e `/storage`

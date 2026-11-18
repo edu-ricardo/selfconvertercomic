@@ -30,6 +30,21 @@ func Open(path string) (*sql.DB, error) {
 	return conn, nil
 }
 
+// Migrate leva o banco à versão mais recente (usado também depois de restaurar um backup antigo).
+func Migrate(conn *sql.DB) error { return migrate(conn) }
+
+// LatestVersion devolve a versão de esquema que esta build conhece (maior NNNN das migrações).
+func LatestVersion() int {
+	files, _ := fs.Glob(migrations, "migrations/*.sql")
+	latest := 0
+	for _, f := range files {
+		if v, err := strconv.Atoi(strings.SplitN(strings.TrimPrefix(f, "migrations/"), "_", 2)[0]); err == nil && v > latest {
+			latest = v
+		}
+	}
+	return latest
+}
+
 // migrate aplica, em ordem, os arquivos NNNN_nome.sql com número maior que PRAGMA user_version.
 func migrate(conn *sql.DB) error {
 	var current int

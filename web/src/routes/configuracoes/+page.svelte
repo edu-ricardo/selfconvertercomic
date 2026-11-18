@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import PageHeader from '$lib/components/page-header.svelte';
+	import BackupsCard from '$lib/components/backups-card.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
 	import { Button } from '$lib/components/ui/button';
@@ -241,4 +242,5 @@
 			<Button type="submit" disabled={saving}>{saving ? 'Salvando…' : 'Salvar'}</Button>
 		</div>
 	</form>
+	<div class="mt-6"><BackupsCard /></div>
 {/if}
