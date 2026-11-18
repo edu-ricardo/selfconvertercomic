@@ -65,7 +65,45 @@ export interface DirListing {
 	dirs: { name: string; path: string }[];
 }
 
+export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+export type JobFilter = 'active' | 'failed' | 'done' | 'cancelled' | 'all';
+
+export interface Job {
+	id: number;
+	libraryId: number;
+	libraryName: string;
+	relPath: string;
+	srcSize: number;
+	auto: boolean;
+	status: JobStatus;
+	progress: number;
+	pages: number;
+	extracted: number;
+	rendered: number;
+	outputRelPath: string;
+	error: string;
+	attempts: number;
+	createdAt: string;
+	startedAt: string | null;
+	finishedAt: string | null;
+}
+
+export interface Turbo {
+	enabled: boolean;
+	until: string | null;
+}
+
 export const api = {
+	listJobs: (status: JobFilter = 'active', limit = 100) =>
+		request<{ jobs: Job[]; counts: Record<JobStatus, number>; turbo: Turbo }>(
+			'GET',
+			`/api/jobs?status=${status}&limit=${limit}`
+		),
+	retryJob: (id: number) => request<{ queued: boolean }>('POST', `/api/jobs/${id}/retry`),
+	cancelJob: (id: number) => request<{ cancelled: boolean }>('POST', `/api/jobs/${id}/cancel`),
+	convertLibrary: (id: number) => request<{ queued: number }>('POST', `/api/libraries/${id}/convert`),
+	setTurbo: (enabled: boolean) => request<Turbo>('PUT', '/api/turbo', { enabled }),
+
 	health: () => request<{ status: string; version: string }>('GET', '/api/health'),
 	getSettings: () => request<Settings>('GET', '/api/settings'),
 	putSettings: (s: Settings) => request<Settings>('PUT', '/api/settings', s),

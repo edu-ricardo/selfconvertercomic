@@ -12,7 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/server"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
@@ -48,7 +50,19 @@ func main() {
 		}
 		return time.Duration(s.Scan.RescanHours) * time.Hour
 	})
+	jobStore := jobs.NewStore(conn)
+	runner := jobs.NewRunner(jobStore, settingsStore, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
+		l, err := libraries.Get(ctx, id)
+		if err == nil && !l.Available {
+			err = errors.New(l.LastError)
+		}
+		return l.Path, l.Name, err
+	})
+	// Varredura nova → procura PDFs para converter; conversão pronta → revarre para o CBZ aparecer.
+	scanner.OnScan = func(library.Library, library.Result) { runner.EnqueueEligible(ctx) }
+	runner.OnDone = scanner.Enqueue
 	go scanner.Run(ctx)
+	go runner.Run(ctx)
 
 	srv := &http.Server{
 		Addr: addr,
@@ -59,6 +73,8 @@ func main() {
 			Libraries: libraries,
 			Roots:     roots,
 			Scanner:   scanner,
+			Jobs:      jobStore,
+			Runner:    runner,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

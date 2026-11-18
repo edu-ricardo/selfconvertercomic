@@ -81,3 +81,39 @@ func TestBrowse(t *testing.T) {
 }
 
 func jsonID(id int64) string { b, _ := json.Marshal(id); return string(b) }
+
+func TestJobsAPI(t *testing.T) {
+	root := t.TempDir()
+	h := newTestServerWithRoots(t, "dev", library.Roots{root})
+
+	rec := get(t, h, "/api/jobs")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"turbo":{"enabled":false`) {
+		t.Fatalf("GET /api/jobs: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := get(t, h, "/api/jobs?status=xyz"); rec.Code != http.StatusBadRequest {
+		t.Errorf("filtro inválido: %d", rec.Code)
+	}
+	rec = do(t, h, http.MethodPut, "/api/turbo", `{"enabled":true}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"enabled":true`) {
+		t.Errorf("turbo: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(t, h, http.MethodPost, "/api/jobs/42/retry", ""); rec.Code != http.StatusNotFound {
+		t.Errorf("retry inexistente: %d", rec.Code)
+	}
+	if rec := do(t, h, http.MethodPost, "/api/jobs/42/cancel", ""); rec.Code != http.StatusNotFound {
+		t.Errorf("cancel inexistente: %d", rec.Code)
+	}
+}
+
+func TestArchiveDirMustBeInsideRoots(t *testing.T) {
+	root := t.TempDir()
+	h := newTestServerWithRoots(t, "dev", library.Roots{root})
+	outside, _ := json.Marshal(map[string]any{"conversion": map[string]any{"originalAction": "archive", "archiveDir": filepath.Dir(root)}})
+	if rec := do(t, h, http.MethodPut, "/api/settings", string(outside)); rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("pasta fora das raízes: %d %s", rec.Code, rec.Body.String())
+	}
+	inside, _ := json.Marshal(map[string]any{"conversion": map[string]any{"originalAction": "archive", "archiveDir": filepath.Join(root, "pdfs")}})
+	if rec := do(t, h, http.MethodPut, "/api/settings", string(inside)); rec.Code != http.StatusOK {
+		t.Errorf("pasta dentro das raízes: %d %s", rec.Code, rec.Body.String())
+	}
+}

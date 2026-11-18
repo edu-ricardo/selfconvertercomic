@@ -1,0 +1,6 @@
+# Fim de linha LF em todo o repositório (gofmt, shell e Docker esperam LF).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.cbz binary

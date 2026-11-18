@@ -15,6 +15,7 @@
 	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import FileArchiveIcon from '@lucide/svelte/icons/file-archive';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
@@ -79,6 +80,15 @@
 		await api.scanLibrary(l.id);
 		l.scanning = true;
 		toast.info(`Varrendo ${l.name}…`);
+	}
+
+	async function convertAll(l: Library) {
+		try {
+			const { queued } = await api.convertLibrary(l.id);
+			toast.success(queued ? `${queued} PDF(s) na fila de conversão` : 'Nenhum PDF pendente');
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Falha');
+		}
 	}
 
 	async function remove() {
@@ -155,7 +165,10 @@
 						/>
 					</div>
 				</Card.Content>
-				<Card.Footer class="flex justify-end gap-2">
+				<Card.Footer class="flex flex-wrap justify-end gap-2">
+					<Button variant="outline" size="sm" disabled={!l.available || l.counts.pdf === 0} onclick={() => convertAll(l)}>
+						<FileArchiveIcon /> Converter PDFs
+					</Button>
 					<Button variant="outline" size="sm" disabled={l.scanning} onclick={() => scanNow(l)}>
 						<RefreshCwIcon /> Varrer agora
 					</Button>

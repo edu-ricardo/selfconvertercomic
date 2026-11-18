@@ -45,6 +45,11 @@ func (r Roots) Resolve(p string) (string, error) {
 	return clean, nil
 }
 
+// Contains diz se p (limpo, absoluto) fica dentro de uma raiz; não exige que exista.
+func (r Roots) Contains(p string) bool {
+	return filepath.IsAbs(p) && r.contains(filepath.Clean(p))
+}
+
 func (r Roots) contains(p string) bool {
 	for _, root := range r {
 		real := root
