@@ -10,14 +10,18 @@ import (
 	"path"
 	"strings"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 )
 
 // Deps são as dependências das rotas.
 type Deps struct {
-	Version  string
-	UI       fs.FS
-	Settings *settings.Store
+	Version   string
+	UI        fs.FS
+	Settings  *settings.Store
+	Libraries *library.Store
+	Roots     library.Roots
+	Scanner   *library.Manager
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.
@@ -28,6 +32,7 @@ func New(d Deps) http.Handler {
 	})
 	mux.HandleFunc("GET /api/settings", d.getSettings)
 	mux.HandleFunc("PUT /api/settings", d.putSettings)
+	d.registerLibraries(mux)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rota não encontrada")
 	})
@@ -51,10 +56,7 @@ func (d Deps) putSettings(w http.ResponseWriter, r *http.Request) {
 		internalError(w, err)
 		return
 	}
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&s); err != nil {
-		writeError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
+	if !decode(w, r, &s) {
 		return
 	}
 	var ve *settings.ValidationError

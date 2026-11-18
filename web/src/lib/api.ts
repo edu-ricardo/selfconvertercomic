@@ -47,8 +47,36 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 	return data as T;
 }
 
+export interface Library {
+	id: number;
+	name: string;
+	path: string;
+	autoConvert: boolean;
+	available: boolean;
+	lastScanAt: string | null;
+	lastError: string;
+	counts: { pdf: number; cbz: number; cbr: number };
+	scanning: boolean;
+}
+
+export interface DirListing {
+	path: string;
+	parent: string;
+	dirs: { name: string; path: string }[];
+}
+
 export const api = {
 	health: () => request<{ status: string; version: string }>('GET', '/api/health'),
 	getSettings: () => request<Settings>('GET', '/api/settings'),
-	putSettings: (s: Settings) => request<Settings>('PUT', '/api/settings', s)
+	putSettings: (s: Settings) => request<Settings>('PUT', '/api/settings', s),
+
+	listLibraries: () =>
+		request<{ libraries: Library[]; watchError: string }>('GET', '/api/libraries'),
+	createLibrary: (l: { name: string; path: string; autoConvert: boolean }) =>
+		request<Library>('POST', '/api/libraries', l),
+	updateLibrary: (id: number, l: { name: string; autoConvert: boolean }) =>
+		request<Library>('PUT', `/api/libraries/${id}`, l),
+	deleteLibrary: (id: number) => request<void>('DELETE', `/api/libraries/${id}`),
+	scanLibrary: (id: number) => request<{ queued: boolean }>('POST', `/api/libraries/${id}/scan`),
+	browse: (path = '') => request<DirListing>('GET', `/api/fs?path=${encodeURIComponent(path)}`)
 };

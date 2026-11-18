@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/server"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 	"github.com/edu-ricardo/selfconvertercomic/web"
@@ -24,6 +25,7 @@ var version = "dev"
 func main() {
 	addr := envOr("QT_ADDR", ":8080")
 	dataDir := envOr("QT_DATA_DIR", "data")
+	roots := library.ParseRoots(envOr("QT_LIBRARY_ROOTS", "/external,/storage"))
 
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		fatal("criando pasta de dados", err)
@@ -34,21 +36,35 @@ func main() {
 	}
 	defer conn.Close()
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	settingsStore := settings.NewStore(conn)
+	libraries := library.NewStore(conn)
+	scanner := library.NewManager(libraries, func() time.Duration {
+		s, err := settingsStore.Get(context.Background())
+		if err != nil {
+			return 6 * time.Hour
+		}
+		return time.Duration(s.Scan.RescanHours) * time.Hour
+	})
+	go scanner.Run(ctx)
+
 	srv := &http.Server{
 		Addr: addr,
 		Handler: server.New(server.Deps{
-			Version:  version,
-			UI:       web.Files(),
-			Settings: settings.NewStore(conn),
+			Version:   version,
+			UI:        web.Files(),
+			Settings:  settingsStore,
+			Libraries: libraries,
+			Roots:     roots,
+			Scanner:   scanner,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
 	go func() {
-		slog.Info("QuadrinhoTeca iniciada", "addr", addr, "data", dataDir, "version", version)
+		slog.Info("QuadrinhoTeca iniciada", "addr", addr, "data", dataDir, "roots", roots, "version", version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			fatal("servidor HTTP falhou", err)
 		}

@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 )
 
@@ -22,12 +24,25 @@ func testUI() fstest.MapFS {
 
 func newTestServer(t *testing.T, version string) http.Handler {
 	t.Helper()
+	return newTestServerWithRoots(t, version, nil)
+}
+
+func newTestServerWithRoots(t *testing.T, version string, roots library.Roots) http.Handler {
+	t.Helper()
 	conn, err := db.Open(filepath.Join(t.TempDir(), "qt.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { conn.Close() })
-	return New(Deps{Version: version, UI: testUI(), Settings: settings.NewStore(conn)})
+	libs := library.NewStore(conn)
+	return New(Deps{
+		Version:   version,
+		UI:        testUI(),
+		Settings:  settings.NewStore(conn),
+		Libraries: libs,
+		Roots:     roots,
+		Scanner:   library.NewManager(libs, func() time.Duration { return time.Hour }),
+	})
 }
 
 func do(t *testing.T, h http.Handler, method, url, body string) *httptest.ResponseRecorder {

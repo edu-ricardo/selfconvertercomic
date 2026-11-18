@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { api } from '$lib/api';
 	import LibraryIcon from '@lucide/svelte/icons/library-big';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
@@ -18,6 +19,7 @@
 
 	const nav = [
 		{ href: '/catalogo', label: 'Catálogo', icon: LibraryIcon },
+		{ href: '/bibliotecas', label: 'Bibliotecas', icon: FolderOpenIcon },
 		{ href: '/tarefas', label: 'Tarefas', icon: ListChecksIcon },
 		{ href: '/fila', label: 'Fila', icon: ListOrderedIcon },
 		{ href: '/configuracoes', label: 'Configurações', icon: SettingsIcon }
