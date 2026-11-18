@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strings"
 )
 
@@ -108,7 +109,7 @@ func (s Settings) Validate() error {
 	switch s.Conversion.OriginalAction {
 	case "keep", "delete":
 	case "archive":
-		if !strings.HasPrefix(s.Conversion.ArchiveDir, "/") {
+		if !filepath.IsAbs(s.Conversion.ArchiveDir) {
 			f["conversion.archiveDir"] = "informe um caminho absoluto"
 		}
 	default:

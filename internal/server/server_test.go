@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +11,9 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 )
@@ -35,13 +38,20 @@ func newTestServerWithRoots(t *testing.T, version string, roots library.Roots) h
 	}
 	t.Cleanup(func() { conn.Close() })
 	libs := library.NewStore(conn)
+	st := settings.NewStore(conn)
+	js := jobs.NewStore(conn)
 	return New(Deps{
 		Version:   version,
 		UI:        testUI(),
-		Settings:  settings.NewStore(conn),
+		Settings:  st,
 		Libraries: libs,
 		Roots:     roots,
 		Scanner:   library.NewManager(libs, func() time.Duration { return time.Hour }),
+		Jobs:      js,
+		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
+			l, err := libs.Get(ctx, id)
+			return l.Path, l.Name, err
+		}),
 	})
 }
 

@@ -59,7 +59,7 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   link simbólico) e bibliotecas sobrepostas são recusados. Testado também no container Linux (inotify),
   com 10 MB de RAM. Tela **Bibliotecas** com seletor de pastas, contagem por formato e "varrer agora".
 
-### M3 — Fila de jobs e conversão PDF → CBZ
+### M3 — Fila de jobs e conversão PDF → CBZ ✅
 - Fila persistente (status, progresso, erro, tentar de novo); 1 worker; **modo turbo** com N workers e
   desligamento por timer.
 - Estabilidade do arquivo (2 min padrão) antes de enfileirar conversão automática.
@@ -69,6 +69,14 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
 - **Verificar:** teste "golden" com PDF de amostra (páginas idênticas byte a byte às imagens do PDF);
   teste com PDF que exige fallback; matar o processo no meio → nenhum CBZ parcial fica na biblioteca e o job
   é retomado; PDF original só é tocado após validação.
+- **Resultado (2026-11-18):** páginas copiadas **byte a byte** (teste com JPEGs gerados); página só com
+  texto renderizada pelo `pdftoppm` (teste no Linux); cancelamento/queda no meio não deixa CBZ parcial
+  (temporário oculto `.nome.cbz.qt-tmp` + `rename`) e o job volta para a fila na partida seguinte; nunca
+  sobrescreve CBZ existente. Amostras reais: `Capítulo 01.pdf` (40 págs.) e `Vingadores Mundiais #21.pdf`
+  (24 págs.), 100% extraídas sem recompressão. No container: ação "arquivar" moveu os PDFs mantendo a
+  estrutura, pico de **46 MB** durante a conversão e **9,8 MB** ociosa depois. Modo turbo testado (1 → 3
+  simultâneas, expira sozinho). Bugs achados no caminho: o pdfcpu entrava em `panic` sem `$HOME` no
+  container (corrigido com `api.DisableConfigDir()`) e um `panic` derrubava a app (agora vira erro do job).
 
 ### M4 — Catálogo
 - Miniaturas sob demanda com cache; grade de capas por série com paginação no servidor.

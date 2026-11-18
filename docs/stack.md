@@ -37,5 +37,6 @@ pdfcpu v0.16.4 (CLI), amostra `Vingadores Mundiais #21.pdf` (17,5 MB, 24 página
 
 **Decisão:** adotar **pdfcpu** (biblioteca Go, sem CGO) para extração. Manter `pdftoppm` (poppler-utils)
 como fallback para páginas que não sejam "uma imagem JPEG/PNG por página" (texto vetorial, várias imagens
-por página, JBIG2/CCITT). O fallback ainda **não foi exercitado**: validar quando surgir um PDF desse tipo
-(amostras novas em `samples/`, fora do git).
+por página, JBIG2/CCITT, CMYK, imagem que não cobre a página). Fallback exercitado no M3 com um PDF só de
+texto (renderizado a ~2400 px de altura). A segunda amostra real (`Capítulo 01.pdf`, Guerras Secretas)
+também é 100% "uma imagem JPEG por página" e traz título nos metadados internos.

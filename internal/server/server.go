@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 )
@@ -22,6 +23,8 @@ type Deps struct {
 	Libraries *library.Store
 	Roots     library.Roots
 	Scanner   *library.Manager
+	Jobs      *jobs.Store
+	Runner    *jobs.Runner
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.
@@ -33,6 +36,7 @@ func New(d Deps) http.Handler {
 	mux.HandleFunc("GET /api/settings", d.getSettings)
 	mux.HandleFunc("PUT /api/settings", d.putSettings)
 	d.registerLibraries(mux)
+	d.registerJobs(mux)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rota não encontrada")
 	})
@@ -57,6 +61,12 @@ func (d Deps) putSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !decode(w, r, &s) {
+		return
+	}
+	// A pasta de arquivo precisa estar num disco montado; senão o PDF iria para dentro do container.
+	if s.Conversion.OriginalAction == "archive" && s.Conversion.ArchiveDir != "" && !d.Roots.Contains(s.Conversion.ArchiveDir) {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "configurações inválidas",
+			"fields": map[string]string{"conversion.archiveDir": "use uma pasta dentro de " + strings.Join(d.Roots, " ou ")}})
 		return
 	}
 	var ve *settings.ValidationError
