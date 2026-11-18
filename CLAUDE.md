@@ -4,9 +4,9 @@
 
 **QuadrinhoTeca** (repositório `selfconvertercomic`) — aplicação self-hosted para o homelab (Umbrel) que:
 
-1. Converte quadrinhos em PDF para CBZ/CBR.
+1. Converte quadrinhos em PDF para CBZ.
 2. Organiza a biblioteca de quadrinhos.
-3. (Secundário) Busca metadados em português para os quadrinhos (hoje consumidos pelo Bookorbit).
+3. (Secundário) Busca metadados em português para os quadrinhos (gravados como ComicInfo.xml; lidos por BookOrbit/Kavita).
 
 Requisitos não funcionais: leve e rápida, empacotada como app Umbrel (Docker) para uma loja própria,
 frontend moderno e com visual padronizado.
