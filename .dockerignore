@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+samples
+docs
+web/node_modules
+web/.svelte-kit
+web/build
+*.exe

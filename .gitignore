@@ -13,3 +13,13 @@ Thumbs.db
 
 # Amostras locais de quadrinhos (não versionar)
 samples/
+
+# Frontend
+web/node_modules/
+web/.svelte-kit/
+web/build/*
+!web/build/.gitkeep
+
+# Binários
+/quadrinhoteca
+/quadrinhoteca.exe

@@ -1,0 +1,98 @@
+# Plano — Entrega 1 (conversão + catálogo)
+
+Escopo: os requisitos marcados **E1** em [especificacao.md](especificacao.md). Cada marco termina com algo
+que roda e tem verificação objetiva (diretriz "execução guiada por objetivos" do [CLAUDE.md](../CLAUDE.md)).
+Um marco = uma branch/PR.
+
+## Escolhas técnicas da E1
+
+| Tema | Escolha | Motivo |
+|---|---|---|
+| Módulo Go | `github.com/edu-ricardo/selfconvertercomic`, binário `quadrinhoteca` | — |
+| SQLite | `modernc.org/sqlite` (Go puro, FTS5, WAL) | mantém o build **sem CGO** |
+| HTTP | `net/http` da biblioteca padrão (roteamento do Go 1.22+) | sem framework |
+| Watcher | `fsnotify` + revarredura periódica | RF-03 |
+| PDF | `pdfcpu` como biblioteca; `pdftoppm` (poppler-utils) no fallback | ver [stack.md](stack.md) |
+| Miniaturas | JPEG 300 px de largura via `image/jpeg` + `golang.org/x/image/draw`, em `/data/cache/thumbs` | sem dependência nativa |
+| Frontend | SvelteKit `adapter-static` + Tailwind + shadcn-svelte, embutido no binário com `go:embed` | um só processo |
+| Imagem | multi-stage → `alpine` + `poppler-utils`, só `linux/amd64` | RNF-01, RNF-06 |
+
+**Suposição da E1:** antes dos metadados (E2), a **série** de um arquivo é a pasta onde ele está, e a
+**editora** é a primeira pasta abaixo da raiz da biblioteca (ex.: `Marvel/guerras_secretas/1984/…` →
+editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substituem essa dedução.
+
+## Marcos
+
+### M0 — Esqueleto e imagem Docker ✅
+- `go.mod`, `cmd/quadrinhoteca`, `GET /api/health`, frontend SvelteKit mínimo embutido.
+- `Dockerfile` multi-stage, `Makefile` (ou `justfile`) com `dev`, `test`, `build`, `docker`.
+- Workflow do GitHub Actions: testes em PR; publica `ghcr.io/edu-ricardo/quadrinhoteca:<versão>` em tag.
+- **Verificar:** `docker run` responde 200 em `/api/health` e serve a UI; imagem < 100 MB; RAM ociosa < 50 MB
+  (`docker stats`); CI verde.
+- **Resultado (2026-11-18):** imagem **60 MB** (amd64, com poppler-utils 25.04), **9 MB de RAM** ociosa,
+  health 200, UI 200, roda como `1000:1000`, healthcheck `healthy`. CI ainda não executado no GitHub.
+  Sem `Makefile`: os comandos estão no README (a máquina de desenvolvimento é Windows).
+
+### M1 — Banco, configurações e casca da UI
+- Migrações SQLite versionadas; tabela de configurações com os padrões decididos.
+- `GET/PUT /api/settings`; layout da UI (menu lateral: Catálogo, Tarefas, Fila, Configurações), tema
+  claro/escuro, responsivo.
+- **Verificar:** testes de migração (banco vazio → versão atual); configuração salva sobrevive a reinício;
+  UI utilizável em 375 px de largura.
+
+### M2 — Bibliotecas e varredura
+- CRUD de bibliotecas; navegador de pastas restrito a `/external` e `/storage` (sem escapar com `..`).
+- Varredura incremental (tamanho + mtime), registra PDF/CBZ/CBR; watcher + revarredura a cada 6 h.
+- Biblioteca indisponível quando o disco some (RF-04); volta sozinha.
+- **Verificar:** testes com pasta temporária (criar/alterar/remover arquivo é refletido); 10 mil arquivos
+  falsos varridos em < 30 s e revarredura sem mudanças em < 5 s; remover a pasta raiz marca "indisponível"
+  sem apagar o catálogo.
+
+### M3 — Fila de jobs e conversão PDF → CBZ
+- Fila persistente (status, progresso, erro, tentar de novo); 1 worker; **modo turbo** com N workers e
+  desligamento por timer.
+- Estabilidade do arquivo (2 min padrão) antes de enfileirar conversão automática.
+- Conversor: extrai imagens (pdfcpu) → fallback `pdftoppm` por página → `ComicInfo.xml` (título, páginas,
+  metadados internos) → zip em arquivo temporário no mesmo disco → valida (abre, nº de páginas) → renomeia →
+  ação sobre o original (manter / mover p/ arquivo / apagar).
+- **Verificar:** teste "golden" com PDF de amostra (páginas idênticas byte a byte às imagens do PDF);
+  teste com PDF que exige fallback; matar o processo no meio → nenhum CBZ parcial fica na biblioteca e o job
+  é retomado; PDF original só é tocado após validação.
+
+### M4 — Catálogo
+- Miniaturas sob demanda com cache; grade de capas por série com paginação no servidor.
+- Filtros: biblioteca, editora, formato, status; busca FTS5 por série/título.
+- Página de detalhe com ações (converter, abrir no Kavita/BookOrbit pela URL base configurada).
+- **Verificar:** com 10 mil itens, listagem paginada responde em < 200 ms; miniatura gerada uma vez só;
+  filtros combinados corretos (teste de API).
+
+### M5 — Tarefas e notificações
+- Tela de tarefas (na E1: erros de conversão com "tentar de novo" / "ignorar").
+- ntfy: URL + tópico + eventos escolhidos (terminou, erro, tarefas pendentes); botão "enviar teste".
+- **Verificar:** erro de conversão gera tarefa; notificação chega num servidor ntfy de teste (`httptest`).
+
+### M6 — Backup
+- Exportar sob demanda e agendado (diário, 7 cópias) via `VACUUM INTO` + configurações num `.zip` em
+  `/data/backups`; baixar pela UI; restaurar a partir de arquivo enviado.
+- **Verificar:** exportar → apagar banco → restaurar → catálogo e configurações idênticos (teste
+  automatizado).
+
+### M7 — Empacotamento e instalação no Umbrel
+- App `florencio-store-quadrinhoteca` na loja (porta 8821, binds `/external` e `/storage`
+  com `create_host_path: false`, dados em `${APP_DATA_DIR}/data`) — PR no repositório da loja.
+- **Verificar:** instalar no Umbrel, cadastrar `/external/Untitled/comics`, converter os 12 PDFs de
+  `Marvel/guerras_secretas/1984` com o original **mantido**, abrir os CBZ no Kavita.
+
+## Pronto da E1
+
+Todos os marcos verificados, CI verde, imagem publicada e app instalado no Umbrel convertendo a biblioteca
+real sem perda de arquivos.
+
+## Riscos
+
+| Risco | Mitigação |
+|---|---|
+| Limite de *watches* do inotify com dezenas de milhares de pastas | Detectar o erro, cair para revarredura e avisar na UI |
+| PDFs que o pdfcpu não extrai | Fallback `pdftoppm`; se falhar, tarefa de erro (nunca CBZ parcial) |
+| HD exFAT/NTFS sem permissões POSIX | Não usar `chown`/`chmod`; gravar como `1000:1000` |
+| Escrita na biblioteca enquanto Kavita/BookOrbit varrem | Escrita atômica (temporário + `rename`) |
