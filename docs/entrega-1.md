@@ -33,12 +33,17 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   health 200, UI 200, roda como `1000:1000`, healthcheck `healthy`. CI ainda não executado no GitHub.
   Sem `Makefile`: os comandos estão no README (a máquina de desenvolvimento é Windows).
 
-### M1 — Banco, configurações e casca da UI
+### M1 — Banco, configurações e casca da UI ✅
 - Migrações SQLite versionadas; tabela de configurações com os padrões decididos.
 - `GET/PUT /api/settings`; layout da UI (menu lateral: Catálogo, Tarefas, Fila, Configurações), tema
   claro/escuro, responsivo.
 - **Verificar:** testes de migração (banco vazio → versão atual); configuração salva sobrevive a reinício;
   UI utilizável em 375 px de largura.
+- **Resultado (2026-11-18):** SQLite em WAL com migrações por `PRAGMA user_version`; configurações como
+  documento JSON único, com padrões, validação (422 com erros por campo) e `PUT` parcial. UI com
+  shadcn-svelte (preset vega), menu lateral (gaveta no celular), tema claro/escuro e tela de Configurações.
+  Verificado: valor salvo pela UI sobrevive a reinício (binário e container), 375 px sem rolagem
+  horizontal, imagem 67 MB, 7 MB de RAM.
 
 ### M2 — Bibliotecas e varredura
 - CRUD de bibliotecas; navegador de pastas restrito a `/external` e `/storage` (sem escapar com `..`).
