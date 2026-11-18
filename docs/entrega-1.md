@@ -125,11 +125,23 @@ editora "Marvel", série "guerras_secretas / 1984"). Na E2 os metadados substitu
   apagado**, instalação limpa, restauração pela API → tudo de volta, 17 MB de RAM. Bug achado no caminho:
   dois backups no mesmo segundo colidiam (acontecia ao restaurar logo depois de um backup manual).
 
-### M7 — Empacotamento e instalação no Umbrel
+### M7 — Empacotamento e instalação no Umbrel ✅ (menos o Kavita)
 - App `florencio-store-quadrinhoteca` na loja (porta 8821, binds `/external` e `/storage`
   com `create_host_path: false`, dados em `${APP_DATA_DIR}/data`) — PR no repositório da loja.
 - **Verificar:** instalar no Umbrel, cadastrar `/external/Untitled/comics`, converter os 12 PDFs de
   `Marvel/guerras_secretas/1984` com o original **mantido**, abrir os CBZ no Kavita.
+- **Resultado (2026-11-18):** tag `v0.1.0` → imagem `ghcr.io/edu-ricardo/quadrinhoteca:0.1.0` publicada
+  pelo `image.yml` (pacote público; pull anônimo OK) e fixada por digest no app da loja
+  ([florencio-store#24](https://github.com/edu-ricardo/florencio-store/pull/24)), com `user: 1000:1000`,
+  `read_only`, `tmpfs: /tmp`, `cap_drop: ALL` e `no-new-privileges`; ícone em `docs/icon.svg`. Instalado no
+  Umbrel pela loja: subiu com 9 MB de RAM. Biblioteca `/external/Untitled/comics` cadastrada **sem**
+  conversão automática: varredura de 295 arquivos (292 PDF, 1 CBZ, 2 CBR) em 0,8 s, nenhum job criado.
+  Os 12 PDFs do 1984 convertidos sob demanda em ~4–5 s cada, sem erro (em cada um, uma página veio do
+  `pdftoppm` e as outras foram extraídas sem recompressão); PDFs originais intactos (mesmo tamanho e data);
+  catálogo mostra CBZ e PDF lado a lado com capa e status "Convertido". Capas dos 2 CBR reais geradas
+  (pendência do M4 resolvida). 43 MB de RAM logo após a fila. **Não feito:** abrir no Kavita — o app
+  Kavita da loja só monta `Downloads` (`/downloads`), não o HD externo; precisa de um ajuste no pacote do
+  Kavita (fora deste repositório). Também segue **não testado** o aviso pelo ntfy real.
 
 ## Pronto da E1
 
