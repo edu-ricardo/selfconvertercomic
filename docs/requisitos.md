@@ -62,3 +62,13 @@ Perguntas e respostas registradas por rodada. Itens marcados **[aberto]** ainda 
 | Padrão de organização | **Template configurável** com variáveis (ex.: `{editora}/{serie} ({ano})/{serie} ({ano}) #{numero}`) |
 | CBR já existentes | **Manter como estão** (só organizar/renomear, sem reempacotar) |
 | Gravação de metadados | **ComicInfo.xml dentro do CBZ** |
+
+### Rodada 4 — acesso, pastas e entregas (2026-11-18)
+
+| Tema | Decisão |
+|---|---|
+| Autenticação | **Só o login do Umbrel** (`PROXY_AUTH_ADD` padrão/ligado); sem login próprio por enquanto |
+| Pastas da biblioteca | **Configuráveis pela UI**, com **várias bibliotecas** em discos diferentes (inclusive discos adicionados no futuro) |
+| Guia dos Quadrinhos | Aceito o risco do scraping (bloqueio/mudança de layout); **ComicVine como plano B** |
+| Entregas | **Entrega 1:** conversão PDF→CBZ + catálogo. **Entrega 2:** organização + metadados. Requisitos levantados por completo agora e arquitetura pensada para o todo desde a entrega 1 |
+| Empacotamento | Seguir o padrão da loja [edu-ricardo/florencio-store](https://github.com/edu-ricardo/florencio-store) — ver [umbrel.md](umbrel.md) |
