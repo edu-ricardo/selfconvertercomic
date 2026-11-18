@@ -3,10 +3,12 @@
 Aplicação self-hosted para homelab (Umbrel) que converte quadrinhos em PDF para CBZ,
 organiza a biblioteca e, opcionalmente, busca metadados em português.
 
-> Status: levantamento de requisitos — ver [docs/requisitos.md](docs/requisitos.md).
+> Status: requisitos consolidados em [docs/especificacao.md](docs/especificacao.md) — ver [docs/requisitos.md](docs/requisitos.md).
 
 ## Documentação
 
 - [docs/requisitos.md](docs/requisitos.md) — necessidade, requisitos e respostas da entrevista
-- [docs/stack.md](docs/stack.md) — opções de tecnologia em avaliação
+- [docs/especificacao.md](docs/especificacao.md) — requisitos consolidados, entregas e arquitetura
+- [docs/stack.md](docs/stack.md) — opções de tecnologia
+- [docs/umbrel.md](docs/umbrel.md) — empacotamento para a loja do Umbrel
 - [CLAUDE.md](CLAUDE.md) — convenções e diretrizes de desenvolvimento

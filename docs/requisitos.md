@@ -93,3 +93,14 @@ Perguntas e respostas registradas por rodada. Itens marcados **[aberto]** ainda 
 | Catálogo | **Grade de capas por série**; filtros por **editora**, **formato** e **status**; **link** para abrir no Kavita/BookOrbit (sem leitor embutido) |
 | Notificações | **ntfy**, configurável: ao terminar, só em erro e/ou quando houver tarefas de ajuste pendentes |
 | Nome do app | **QuadrinhoTeca** (id sugerido na loja: `florencio-store-quadrinhoteca`) |
+
+### Rodada 7 — operação e desempenho (2026-11-18)
+
+| Tema | Decisão |
+|---|---|
+| Volume | Centenas hoje; projetar para **dezenas de milhares** de arquivos |
+| Paralelismo | **1 conversão por vez** por padrão; **modo turbo** opcional com mais paralelismo e **desligamento automático por timer** (ex.: 4 h) |
+| Detecção | **Eventos do sistema de arquivos** + **revarredura periódica** de segurança (cobre HD desconectado/reconectado) |
+| Arquivo em cópia | Só converter após o arquivo ficar **estável** por um tempo configurável (padrão na casa de **minutos**) |
+| Links para leitores | **URL base configurável** por leitor (Kavita, BookOrbit) |
+| Backup | A app **exporta backups** próprios (banco + configurações) |
