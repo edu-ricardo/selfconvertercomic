@@ -104,3 +104,25 @@ Perguntas e respostas registradas por rodada. Itens marcados **[aberto]** ainda 
 | Arquivo em cópia | Só converter após o arquivo ficar **estável** por um tempo configurável (padrão na casa de **minutos**) |
 | Links para leitores | **URL base configurável** por leitor (Kavita, BookOrbit) |
 | Backup | A app **exporta backups** próprios (banco + configurações) |
+
+### Rodada 8 — fontes de metadados e acervo (2026-11-19)
+
+Descobertas antes de planejar a E2:
+
+- O **Guia dos Quadrinhos** passou a ficar atrás do desafio anti-robô do Cloudflare (*managed challenge*):
+  qualquer cliente automático recebe 403 com "Just a moment…". Contornar o desafio é burlar a proteção do
+  site, o que a app não fará. O site do GCD tem o mesmo bloqueio, mas a **API do GCD** (`comics.org/api/`)
+  responde sem chave e tem séries brasileiras em pt-BR (Panini), com cobertura rala (muitas edições sem
+  créditos, sinopse ou capa).
+- Os metadados internos dos PDFs quase não ajudam (ex.: só `Title = Guerras Secretas`, `Author =
+  HQOnline.com.br`; outro PDF sem nada). A identificação depende do **nome do arquivo e das pastas**.
+- Os nomes misturam padrões: `015-Magneto-v3-019`, `Os Novos Vingadores v3 #25 (MK-SQ)`,
+  `Surfista-Prateado-013-2015-SQ`, `Capítulo 01` (série = pasta), `Cópia de Capítulo 37`, nomes truncados
+  (`189-Capit-Marvel-e-a-Tropa-da-Ca`). Há uma árvore `arquivospdf/Quadrinhos/Marvel/...` que parece
+  repetir `Marvel/...`.
+
+| Tema | Decisão |
+|---|---|
+| Fontes de metadados | **ComicVine** (chave do usuário) para a edição original americana + **API do GCD** para a edição brasileira quando existir. O **Guia dos Quadrinhos sai do escopo** |
+| Acervo | **Misturado**: traduções de fã de edições americanas e digitalizações de edições brasileiras. A app tenta a edição BR (GCD) e cai para a original (ComicVine) |
+| Ordem da E2 | **Metadados primeiro**; a organização usa os dados identificados |

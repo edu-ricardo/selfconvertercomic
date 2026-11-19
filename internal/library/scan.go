@@ -27,7 +27,7 @@ var formats = map[string]string{".pdf": "pdf", ".cbz": "cbz", ".cbr": "cbr"}
 type fileState struct {
 	id          int64
 	size, mtime int64
-	derived     bool // publisher/series/title já preenchidos
+	derived     bool // publisher/series/title preenchidos e ligado a uma edição
 }
 
 // Derive calcula editora, série e título a partir do caminho relativo (regra da entrega 1):
@@ -111,6 +111,11 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 		return res, fmt.Errorf("%w: %v", ErrUnavailable, walkErr)
 	}
 
+	stale, err := editionsStale(ctx, s.db, lib.ID)
+	if err != nil {
+		return res, err
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return res, err
@@ -155,6 +160,11 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 			res.Removed++
 		}
 	}
+	if len(changed) > 0 || res.Removed > 0 || stale {
+		if err := syncEditions(ctx, tx, lib.ID); err != nil {
+			return res, err
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return res, err
 	}
@@ -165,7 +175,7 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 }
 
 func (s *Store) knownFiles(ctx context.Context, libID int64) (map[string]fileState, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, rel_path, size, mtime, title <> '' FROM files WHERE library_id = ?", libID)
+	rows, err := s.db.QueryContext(ctx, "SELECT id, rel_path, size, mtime, title <> '' AND edition_id IS NOT NULL FROM files WHERE library_id = ?", libID)
 	if err != nil {
 		return nil, err
 	}

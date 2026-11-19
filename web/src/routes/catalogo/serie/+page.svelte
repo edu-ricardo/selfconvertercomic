@@ -9,7 +9,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { api, type CatalogFile, type CatalogFilter } from '$lib/api';
 	import { filterFromURL, filterToQuery } from '$lib/catalog-url';
-	import { fileStatusLabel, fileStatusVariant } from '$lib/status';
+	import { editionLabel, fileStatusLabel, fileStatusVariant } from '$lib/status';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import BookIcon from '@lucide/svelte/icons/book';
 
@@ -80,7 +80,15 @@
 						</span>
 					</div>
 					<div class="grid min-w-0 gap-1">
-						<p class="line-clamp-2 text-sm leading-tight font-medium" title={f.title}>{f.title}</p>
+						<p class="line-clamp-2 text-sm leading-tight font-medium" title={f.title}>
+							{#if f.number}
+								<span
+									class="text-muted-foreground"
+									title={f.numberInferred ? 'Número deduzido pela ordem de leitura' : undefined}
+								>{editionLabel(f)}</span>
+							{/if}
+							{f.title}
+						</p>
 						{#if f.status !== 'ready'}
 							<Badge variant={fileStatusVariant(f.status)}>{fileStatusLabel[f.status]}</Badge>
 						{/if}
