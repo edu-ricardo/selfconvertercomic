@@ -76,6 +76,7 @@ func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.
 		Backups:    &backup.Manager{DB: conn, Dir: t.TempDir(), Settings: st, Version: version},
 		Identifier: &identify.Identifier{DB: conn, Finder: finder, Tasks: tasks.NewStore(conn), Settings: st.Get},
 		Metadata:   finder,
+		DB:         conn,
 		Organizer: &organize.Organizer{DB: conn, Libraries: libs,
 			Exclusive: func(_ int64, fn func() error) error { return fn() }},
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {

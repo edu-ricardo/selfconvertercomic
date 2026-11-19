@@ -142,12 +142,24 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
   regravação falha e a edição fica com erro (basta "Identificar de novo"); Kavita/BookOrbit veem os
   caminhos novos na próxima varredura deles.
 
-### M12 — Duplicados
+### M12 — Duplicados ✅
 - Hash do conteúdo calculado em segundo plano (sem bloquear a varredura); grupos por conteúdo igual e
   por mesma edição em formatos/pastas diferentes.
 - Tela "Duplicados" só lista e leva ao arquivo; nada é apagado (RF-44).
 - **Verificar:** testes com cópias idênticas e mesma edição em formatos diferentes; na biblioteca real,
   a árvore `arquivospdf/Quadrinhos/Marvel/...` aparece como duplicada de `Marvel/...`.
+- **Resultado (2026-11-19):** `internal/dupes`: SHA-256 de cada arquivo calculado em segundo plano, um por
+  vez e em blocos de 256 KB (pouca memória), só de bibliotecas disponíveis; a varredura zera o hash quando
+  o arquivo muda de tamanho ou data (mover/renomear mantém). Dois tipos de grupo: **conteúdo idêntico** e
+  **mesma edição em lugares diferentes** (mesma edição aplicada da fonte, ou mesma série + número + ano
+  pelo nome; PDF e CBZ da mesma pasta não contam). Um grupo de "mesma edição" em que todo arquivo já tem
+  sua cópia exata dentro dele some — a árvore duplicada inteira aparece uma vez só, como conteúdo
+  idêntico; fica o que traz informação nova (outra digitalização, outro formato). Tela **Duplicados**
+  (filtro por tipo, progresso do cálculo, link para cada arquivo) e `GET /api/duplicates`; **nada é
+  apagado** (RF-44). **Teste real** (biblioteca local com a pasta de 1984 copiada para
+  `arquivospdf/Quadrinhos/Marvel/...`, como no acervo): 29 arquivos (~600 MB) com hash em menos de 30 s;
+  13 grupos de conteúdo idêntico, um por arquivo da cópia; a primeira versão mostrava a mesma cópia também
+  como 12 grupos de "mesma edição" (corrigido como descrito acima).
 
 ### M13 — Versão 0.2.0 no Umbrel
 - Tag `v0.2.0`, atualização do app na loja (digest novo).

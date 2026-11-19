@@ -16,6 +16,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/dupes"
 	"github.com/edu-ricardo/selfconvertercomic/internal/identify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
@@ -124,7 +125,14 @@ func main() {
 		onScan(l, r)
 		identifier.Notify()
 	}
+	hasher := &dupes.Hasher{DB: conn}
+	onScanID := scanner.OnScan
+	scanner.OnScan = func(l library.Library, r library.Result) {
+		onScanID(l, r)
+		hasher.Notify()
+	}
 	go identifier.Run(ctx)
+	go hasher.Run(ctx)
 	go scanner.Run(ctx)
 	go runner.Run(ctx)
 	go backups.Run(ctx)
@@ -148,6 +156,7 @@ func main() {
 			Metadata:   finder,
 			Identifier: identifier,
 			Organizer:  &organize.Organizer{DB: conn, Libraries: libraries, Exclusive: scanner.Exclusive},
+			DB:         conn,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

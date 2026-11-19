@@ -256,6 +256,29 @@ export interface OrganizeOp {
 	undoneAt: string | null;
 }
 
+export interface DuplicateFile {
+	id: number;
+	libraryId: number;
+	libraryName: string;
+	relPath: string;
+	format: Format;
+	size: number;
+	editionId: number;
+}
+
+export interface DuplicateGroup {
+	kind: 'content' | 'edition';
+	label: string;
+	files: DuplicateFile[];
+}
+
+export interface DuplicatesReport {
+	pending: number;
+	total: number;
+	groups: DuplicateGroup[];
+	more: boolean;
+}
+
 export interface BackupInfo {
 	name: string;
 	size: number;
@@ -283,6 +306,8 @@ export const api = {
 		request<OrganizeOp>('POST', `/api/libraries/${library}/organize`, { template, editions }),
 	organizeHistory: (library: number) => request<OrganizeOp[]>('GET', `/api/libraries/${library}/organize/history`),
 	organizeUndo: (op: number) => request<OrganizeOp>('POST', `/api/organize/${op}/undo`),
+
+	duplicates: () => request<DuplicatesReport>('GET', '/api/duplicates'),
 
 	listBackups: () => request<BackupInfo[]>('GET', '/api/backups'),
 	createBackup: () => request<BackupInfo>('POST', '/api/backups'),
