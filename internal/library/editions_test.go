@@ -90,3 +90,29 @@ func TestScanEditions(t *testing.T) {
 		t.Errorf("edição de versão antiga não foi reanalisada: %+v", e)
 	}
 }
+
+// Banco de uma versão anterior (arquivos no catálogo, sem edições): as edições criadas na varredura
+// seguinte não pedem identificação; só a de um arquivo que acabou de aparecer pede.
+func TestEditionsFromUpgradeAreNotNew(t *testing.T) {
+	s := newStore(t)
+	root := t.TempDir()
+	write(t, filepath.Join(root, "Marvel/guerras_secretas/1984/Capítulo 01.pdf"), "a")
+	lib, _ := s.Create(context.Background(), "HD", root, false)
+	scan(t, s, lib)
+	s.db.Exec("UPDATE files SET edition_id = NULL")
+	s.db.Exec("DELETE FROM editions")
+
+	write(t, filepath.Join(root, "Marvel/guerras_secretas/1984/Capítulo 02.pdf"), "b")
+	scan(t, s, lib)
+	status := map[string]string{}
+	rows, _ := s.db.Query("SELECT stem, meta_status FROM editions")
+	for rows.Next() {
+		var stem, st string
+		rows.Scan(&stem, &st)
+		status[stem] = st
+	}
+	rows.Close()
+	if status["Capítulo 01"] != "" || status["Capítulo 02"] != "new" {
+		t.Errorf("status das edições: %v", status)
+	}
+}
