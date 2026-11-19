@@ -78,43 +78,63 @@ func (g *GCD) Search(ctx context.Context, gs Guess, lim Limits) ([]Candidate, er
 	byID := map[string]gcdSeries{}
 	series := make([]Candidate, 0, len(page.Results))
 	for _, s := range page.Results {
-		id := lastSegment(s.APIURL)
-		byID[id] = s
-		c := Candidate{Provider: "gcd", SeriesID: id, Series: s.Name, Language: s.Language,
-			IssueCount: len(s.Issues), URL: siteURL(s.APIURL)}
-		c.Year, _ = strconv.Atoi(fmt.Sprint(s.YearBegan))
+		c := gcdSeriesCandidate(s)
+		byID[c.SeriesID] = s
 		series = append(series, c)
 	}
 	return bestIssues(ctx, gs, series, func(ctx context.Context, s Candidate) (*Candidate, error) {
-		ser := byID[s.SeriesID]
-		issueURL := ""
-		for i, d := range ser.Descriptors {
-			if f := strings.Fields(d); len(f) > 0 && trimZeros(f[0]) == gs.Number && i < len(ser.Issues) {
-				issueURL = ser.Issues[i]
-				break
-			}
-		}
-		if issueURL == "" {
-			return nil, nil
-		}
-		var is gcdIssue
-		if err := g.get(ctx, "/issue/"+lastSegment(issueURL)+"/", lim, &is); err != nil {
-			return nil, err
-		}
-		c := s
-		c.IssueID, c.Number, c.Publisher, c.CoverURL = lastSegment(is.APIURL), is.Number, is.IndiciaPublisher, is.Cover
-		c.URL = siteURL(is.APIURL)
-		c.Title = is.Title
-		for _, st := range is.Stories {
-			if c.Title == "" && st.Type == "comic story" && st.Title != "" {
-				c.Title = st.Title
-			}
-		}
-		if y, err := strconv.Atoi(firstN(is.KeyDate, 4)); err == nil && y > 0 {
-			c.Year = y
-		}
-		return &c, nil
+		return g.issueIn(ctx, byID[s.SeriesID], s, gs.Number, lim)
 	})
+}
+
+func gcdSeriesCandidate(s gcdSeries) Candidate {
+	c := Candidate{Provider: "gcd", SeriesID: lastSegment(s.APIURL), Series: s.Name, Language: s.Language,
+		IssueCount: len(s.Issues), URL: siteURL(s.APIURL)}
+	c.Year, _ = strconv.Atoi(fmt.Sprint(s.YearBegan))
+	return c
+}
+
+// issueIn procura a edição de número number na série (nil se ela não tiver).
+func (g *GCD) issueIn(ctx context.Context, ser gcdSeries, s Candidate, number string, lim Limits) (*Candidate, error) {
+	issueURL := ""
+	for i, d := range ser.Descriptors {
+		if f := strings.Fields(d); len(f) > 0 && trimZeros(f[0]) == number && i < len(ser.Issues) {
+			issueURL = ser.Issues[i]
+			break
+		}
+	}
+	if issueURL == "" {
+		return nil, nil
+	}
+	var is gcdIssue
+	if err := g.get(ctx, "/issue/"+lastSegment(issueURL)+"/", lim, &is); err != nil {
+		return nil, err
+	}
+	c := s
+	c.IssueID, c.Number, c.Publisher, c.CoverURL = lastSegment(is.APIURL), is.Number, is.IndiciaPublisher, is.Cover
+	c.URL = siteURL(is.APIURL)
+	c.Title = is.Title
+	for _, st := range is.Stories {
+		if c.Title == "" && st.Type == "comic story" && st.Title != "" {
+			c.Title = st.Title
+		}
+	}
+	if y, err := strconv.Atoi(firstN(is.KeyDate, 4)); err == nil && y > 0 {
+		c.Year = y
+	}
+	return &c, nil
+}
+
+// IssueInSeries acha a edição de número number na série seriesID do GCD.
+func (g *GCD) IssueInSeries(ctx context.Context, seriesID, number string, lim Limits) (*Candidate, error) {
+	var ser gcdSeries
+	if err := g.get(ctx, "/series/"+seriesID+"/", lim, &ser); err != nil {
+		return nil, err
+	}
+	if ser.APIURL == "" {
+		ser.APIURL = g.base() + "/series/" + seriesID + "/"
+	}
+	return g.issueIn(ctx, ser, gcdSeriesCandidate(ser), number, lim)
 }
 
 // lastSegment: "https://www.comics.org/api/issue/76314/" → "76314".

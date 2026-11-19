@@ -100,4 +100,8 @@ func TestFindDuplicates(t *testing.T) {
 	if r, _ := Find(ctx, conn, 1); len(r.Groups) != 1 || !r.More {
 		t.Errorf("limite: %d grupos, more=%v", len(r.Groups), r.More)
 	}
+	conn.Exec("DELETE FROM files")
+	if r, _ := Find(ctx, conn, 50); r.Groups == nil {
+		t.Error("sem duplicados, a lista deve ser vazia (não null)")
+	}
 }

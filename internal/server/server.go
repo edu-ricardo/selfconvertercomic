@@ -13,6 +13,7 @@ import (
 
 	"github.com/edu-ricardo/selfconvertercomic/internal/backup"
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
+	"github.com/edu-ricardo/selfconvertercomic/internal/dupes"
 	"github.com/edu-ricardo/selfconvertercomic/internal/identify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
@@ -42,6 +43,7 @@ type Deps struct {
 	Identifier *identify.Identifier
 	Organizer  *organize.Organizer
 	DB         *sql.DB // consultas só de leitura (duplicados)
+	Trash      *dupes.Trash
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.

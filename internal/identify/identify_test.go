@@ -348,3 +348,35 @@ func TestIdentifyTransientKeepsQueued(t *testing.T) {
 		e.conn.Exec("UPDATE editions SET meta_status = 'applied'") // tira da frente para o próximo caso
 	}
 }
+
+func TestApplyManual(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	e.cfg.Metadata.AutoIdentify = false
+	cbz := e.cbz(t, "Marvel/Grandes Eventos/Mark Millar - Guerra Civil (2022).cbz")
+	e.scan(t)
+	ed := e.edition(t, "Marvel/Grandes Eventos/Mark Millar - Guerra Civil (2022)")
+	if err := e.id.ApplyManual(ctx, ed.ID, metadata.Details{Series: "  ", Number: "1"}); !errors.Is(err, ErrManualSeries) {
+		t.Errorf("sem série: %v", err)
+	}
+	err := e.id.ApplyManual(ctx, ed.ID, metadata.Details{Provider: "gcd", IssueID: "9", Series: " Guerra Civil ", Number: "#1",
+		Year: 2022, Month: 3, Publisher: "Panini", Writers: []string{" Mark Millar ", ""}, Pencillers: []string{"Steve McNiven"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed = e.edition(t, "Marvel/Grandes Eventos/Mark Millar - Guerra Civil (2022)")
+	if ed.Status != StatusApplied || ed.Score != ManualScore || ed.Applied.Provider != "manual" || ed.Applied.IssueID != "" ||
+		ed.Applied.Number != "1" || len(ed.Applied.Writers) != 1 {
+		t.Fatalf("manual: %+v %+v", ed, ed.Applied)
+	}
+	ci := comicInfoOf(t, cbz)
+	for _, want := range []string{"<Series>Guerra Civil</Series>", "<Number>1</Number>", "<Writer>Mark Millar</Writer>",
+		"<Penciller>Steve McNiven</Penciller>", "<Publisher>Panini</Publisher>", "preenchidos à mão"} {
+		if !strings.Contains(ci, want) {
+			t.Errorf("ComicInfo sem %q:\n%s", want, ci)
+		}
+	}
+	if e.hits.Load() != 0 {
+		t.Errorf("metadados manuais não deveriam consultar fontes: %d pedidos", e.hits.Load())
+	}
+}

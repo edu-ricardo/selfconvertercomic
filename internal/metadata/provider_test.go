@@ -29,6 +29,9 @@ func fakeGCD(t *testing.T, hits *atomic.Int32) *httptest.Server {
 			  "active_issues":["%[1]s/issue/2214216/"],"issue_descriptors":["1"]},
 			 {"api_url":"%[1]s/series/41527/","name":"Secret Wars (Guerras Secretas)","country":"br","language":"pt","year_began":"1986",
 			  "active_issues":["%[1]s/issue/726769/","%[1]s/issue/726770/"],"issue_descriptors":["1","2"]}]}`, base)
+		case "/api/series/41527/":
+			fmt.Fprintf(w, `{"api_url":"%[1]s/series/41527/","name":"Secret Wars (Guerras Secretas)","language":"pt","year_began":"1986",
+			  "active_issues":["%[1]s/issue/726769/","%[1]s/issue/726770/"],"issue_descriptors":["1","2"]}`, base)
 		case "/api/issue/726769/":
 			fmt.Fprintf(w, `{"api_url":"%s/issue/726769/","series_name":"Secret Wars (Guerras Secretas) (1986 series)","number":"1",
 			 "title":"","key_date":"1986-08-12","indicia_publisher":"Editora Abril S.A.",
@@ -61,6 +64,9 @@ func fakeComicVine(t *testing.T, hits *atomic.Int32) *httptest.Server {
 			}
 			fmt.Fprint(w, `{"error":"OK","status_code":1,"results":[{"id":2895,"name":"Secret Wars","start_year":"1984",
 			 "count_of_issues":12,"publisher":{"name":"Marvel"},"site_detail_url":"https://comicvine.gamespot.com/secret-wars/4050-2895/"}]}`)
+		case "/api/volume/4050-2895/":
+			fmt.Fprint(w, `{"error":"OK","status_code":1,"results":{"id":2895,"name":"Secret Wars","start_year":"1984",
+			 "count_of_issues":12,"publisher":{"name":"Marvel"},"site_detail_url":"https://comicvine.gamespot.com/secret-wars/4050-2895/"}}`)
 		case "/api/issues/":
 			if f := r.URL.Query().Get("filter"); f != "volume:2895,issue_number:1" {
 				t.Errorf("filtro: %s", f)
@@ -295,5 +301,46 @@ func TestFetcherRetryAfter(t *testing.T) {
 	}
 	if retryAfter("") != defaultBlock || retryAfter("abc") != defaultBlock || retryAfter("30") != 30*time.Second {
 		t.Error("leitura do Retry-After")
+	}
+}
+
+func TestParseLink(t *testing.T) {
+	ok := map[string]Link{
+		"https://comicvine.gamespot.com/secret-wars-1-the-war-begins/4000-31744/": {"comicvine", "issue", "31744"},
+		"https://comicvine.gamespot.com/secret-wars/4050-2895/":                   {"comicvine", "series", "2895"},
+		" https://www.comics.org/issue/726769/ ":                                  {"gcd", "issue", "726769"},
+		"https://comics.org/series/41527":                                         {"gcd", "series", "41527"},
+	}
+	for raw, want := range ok {
+		if got, err := ParseLink(raw); err != nil || got != want {
+			t.Errorf("%q: %+v %v", raw, got, err)
+		}
+	}
+	for _, raw := range []string{"", "Secret Wars", "https://www.comics.org/publisher/4738/", "https://example.com/4000-1/",
+		"https://comicvine.gamespot.com/secret-wars/4005-1/"} {
+		if _, err := ParseLink(raw); !errors.Is(err, ErrLink) {
+			t.Errorf("%q deveria ser recusado: %v", raw, err)
+		}
+	}
+}
+
+// Candidato que é só a série (arquivo sem número): a edição é achada pelo número informado.
+func TestIssueInSeries(t *testing.T) {
+	e := newEnv(t)
+	e.cfg.Metadata.RateSeconds = 0
+	ctx := context.Background()
+	c, err := e.finder.IssueInSeries(ctx, "gcd", "41527", "#01")
+	if err != nil || c.IssueID != "726769" || c.Series != "Secret Wars (Guerras Secretas)" || c.Number != "1" {
+		t.Errorf("GCD: %+v %v", c, err)
+	}
+	if _, err := e.finder.IssueInSeries(ctx, "gcd", "41527", "9"); !errors.Is(err, ErrNoIssue) {
+		t.Errorf("número que a série não tem: %v", err)
+	}
+	c, err = e.finder.IssueInSeries(ctx, "comicvine", "2895", "1")
+	if err != nil || c.IssueID != "31744" || c.Series != "Secret Wars" || c.Publisher != "Marvel" {
+		t.Errorf("ComicVine: %+v %v", c, err)
+	}
+	if _, err := e.finder.IssueInSeries(ctx, "gcd", "41527", ""); !errors.Is(err, ErrNoIssue) {
+		t.Errorf("sem número: %v", err)
 	}
 }

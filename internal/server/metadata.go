@@ -15,6 +15,7 @@ func (d Deps) registerMetadata(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/files/{id}/candidates", d.fileCandidates)
 	mux.HandleFunc("POST /api/files/{id}/identify", d.identifyFile)
 	mux.HandleFunc("POST /api/files/{id}/metadata", d.applyMetadata)
+	mux.HandleFunc("PUT /api/files/{id}/metadata", d.manualMetadata)
 	mux.HandleFunc("POST /api/libraries/{id}/identify", d.identifyLibrary)
 	mux.HandleFunc("POST /api/catalog/series/identify", d.identifySeries)
 	mux.HandleFunc("POST /api/metadata/comicvine/test", d.testComicVine)
@@ -75,7 +76,11 @@ func (d Deps) identifyFile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]bool{"queued": true})
 }
 
-// applyMetadata aplica o candidato escolhido pelo usuário (fecha a tarefa de confirmação).
+// applyMetadata aplica a edição escolhida pelo usuário e fecha a tarefa de confirmação. Aceita:
+//
+//	{"provider", "issueId", "score"}   candidato da lista
+//	{"provider", "seriesId", "number"} candidato que é só a série + o número da edição
+//	{"url", "number"}                  link da edição (ou da série + número) no ComicVine ou no GCD
 func (d Deps) applyMetadata(w http.ResponseWriter, r *http.Request) {
 	id, ok := d.lookupEdition(w, r)
 	if !ok {
@@ -84,19 +89,86 @@ func (d Deps) applyMetadata(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Provider string `json:"provider"`
 		IssueID  string `json:"issueId"`
+		SeriesID string `json:"seriesId"`
+		Number   string `json:"number"`
+		URL      string `json:"url"`
 		Score    int    `json:"score"`
 	}
 	if !decode(w, r, &body) {
 		return
 	}
-	if body.IssueID == "" || (body.Provider != "gcd" && body.Provider != "comicvine") {
-		writeError(w, http.StatusBadRequest, "informe provider (gcd ou comicvine) e issueId")
+	if body.URL != "" {
+		link, err := metadata.ParseLink(body.URL)
+		if err != nil {
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+		body.Provider, body.IssueID, body.SeriesID, body.Score = link.Provider, "", "", identify.ManualScore
+		if link.Kind == "issue" {
+			body.IssueID = link.ID
+		} else {
+			body.SeriesID = link.ID
+		}
+	}
+	if body.Provider != "gcd" && body.Provider != "comicvine" {
+		writeError(w, http.StatusBadRequest, "informe provider (gcd ou comicvine), url ou issueId")
+		return
+	}
+	if body.IssueID == "" && body.SeriesID != "" {
+		if body.Number == "" {
+			ed, err := d.Identifier.Get(r.Context(), id)
+			if err != nil {
+				internalError(w, err)
+				return
+			}
+			body.Number = ed.Guess.Number
+		}
+		c, err := d.Metadata.IssueInSeries(r.Context(), body.Provider, body.SeriesID, body.Number)
+		if errors.Is(err, metadata.ErrNoIssue) {
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+		if writeProviderError(w, err) {
+			return
+		}
+		body.IssueID = c.IssueID
+		if body.Score == 0 {
+			body.Score = identify.ManualScore
+		}
+	}
+	if body.IssueID == "" {
+		writeError(w, http.StatusBadRequest, "informe issueId, seriesId + number ou url")
 		return
 	}
 	err := d.Identifier.Apply(r.Context(), id, body.Provider, body.IssueID, body.Score, nil)
 	if writeProviderError(w, err) {
 		return
 	}
+	d.writeEdition(w, r, id)
+}
+
+// manualMetadata grava metadados preenchidos à mão.
+func (d Deps) manualMetadata(w http.ResponseWriter, r *http.Request) {
+	id, ok := d.lookupEdition(w, r)
+	if !ok {
+		return
+	}
+	var body metadata.Details
+	if !decode(w, r, &body) {
+		return
+	}
+	err := d.Identifier.ApplyManual(r.Context(), id, body)
+	if errors.Is(err, identify.ErrManualSeries) || errors.Is(err, identify.ErrManualDate) {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	if writeProviderError(w, err) {
+		return
+	}
+	d.writeEdition(w, r, id)
+}
+
+func (d Deps) writeEdition(w http.ResponseWriter, r *http.Request, id int64) {
 	ed, err := d.Identifier.Get(r.Context(), id)
 	if err != nil {
 		internalError(w, err)

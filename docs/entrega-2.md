@@ -166,6 +166,31 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
 - **Verificar:** atualizar no Umbrel sem perder o banco; identificar a biblioteca real; conferir as
   tarefas criadas; organizar e desfazer a pasta do 1984.
 
+### M14 — Ajustes depois da 0.2.0 (rodada 9) ✅
+- Candidato que é só a série: informar o número e buscar a edição nela.
+- Metadados por link do ComicVine ou do GCD (edição, ou série + número).
+- Edição manual dos metadados (formulário; `ComicInfo.xml` regravado).
+- Lixeira da app (`.quadrinhoteca-lixeira` na biblioteca), restaurar e esvaziar; exclusão em lote na tela
+  de Duplicados: PDFs que já têm CBZ, uma pasta inteira, um a um — nunca a última cópia de um conteúdo.
+- **Verificar:** testes de cada parte; teste real com a série de 1984 e a árvore duplicada; na biblioteca
+  real, o caso `Mark Millar - Guerra Civil (2022)`.
+- **Resultado (2026-11-19):** o "Usar este" desativado era o candidato que é só a **série** (arquivo sem
+  número: `Mark Millar - Guerra Civil (2022)`, achado na biblioteca real pelo Umbrel); agora ele mostra um
+  campo de número (padrão: o do arquivo, ou 1) e busca a edição nessa série (`IssueInSeries`, GCD pelo
+  descritor e ComicVine por `issues?filter=volume:…,issue_number:…`). **Link**: `ParseLink` reconhece a
+  página da edição (`comicvine…/4000-N/`, `comics.org/issue/N/`) e da série (`…/4050-N/`,
+  `comics.org/series/N/`, com o número). **Manual**: formulário "Preencher à mão" (série obrigatória,
+  créditos separados por vírgula), gravado como fonte `manual`, nota 100, no `ComicInfo.xml`. **Lixeira**:
+  `.quadrinhoteca-lixeira/<quando>/<caminho original>` na própria biblioteca (oculta da varredura);
+  restaurar (exige o caminho original livre) e esvaziar (com confirmação). Exclusão em lote na tela de
+  Duplicados: PDFs que já têm CBZ, cópias de uma pasta (só as que têm cópia igual fora dela) e marcados um
+  a um. O servidor recusa tudo se algum arquivo ficaria sem representante (outra cópia idêntica, o CBZ da
+  edição, ou outra versão da mesma edição) — e o que já está na lixeira não conta como cópia, mesmo antes
+  da varredura seguinte. **Teste real** (biblioteca local): link de série do GCD + número aplicado;
+  preenchimento manual pela tela gravado no CBZ; as 13 cópias da árvore `arquivospdf` para a lixeira e de
+  volta deixaram os arquivos idênticos; os 3 PDFs com CBZ para a lixeira e "esvaziar" apagou só eles.
+  **Bug achado:** sem nenhum duplicado a API devolvia `null` em vez de lista vazia (a tela quebraria).
+
 ## Fora deste plano
 - **Kavita lendo o HD externo:** ajuste no pacote do Kavita na florencio-store (outro repositório).
 - **Aviso pelo ntfy real:** continua sem teste.

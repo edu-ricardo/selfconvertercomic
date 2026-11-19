@@ -82,6 +82,22 @@ func TestMetadataAPI(t *testing.T) {
 		t.Errorf("busca manual sem série: %d", rec.Code)
 	}
 
+	// Link: não reconhecido → 422; reconhecido, com a fonte fora → 503.
+	if rec := do(t, h, http.MethodPost, "/api/files/"+id+"/metadata", `{"url":"https://example.com/x"}`); rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("link desconhecido: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(t, h, http.MethodPost, "/api/files/"+id+"/metadata", `{"url":"https://www.comics.org/series/41527/","number":"1"}`); rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("link de série com a fonte fora: %d %s", rec.Code, rec.Body.String())
+	}
+	// Manual.
+	if rec := do(t, h, http.MethodPut, "/api/files/"+id+"/metadata", `{"number":"1"}`); rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("manual sem série: %d", rec.Code)
+	}
+	rec = do(t, h, http.MethodPut, "/api/files/"+id+"/metadata", `{"series":"Guerras Secretas","number":"1","year":1984,"writers":["Jim Shooter"]}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"provider":"manual"`) || !strings.Contains(rec.Body.String(), `"status":"applied"`) {
+		t.Errorf("manual: %d %s", rec.Code, rec.Body.String())
+	}
+
 	s := settings.Defaults()
 	s.Metadata.GCDEnabled = false
 	settings.NewStore(conn).Put(context.Background(), s)

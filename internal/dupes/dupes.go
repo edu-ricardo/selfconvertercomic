@@ -176,7 +176,7 @@ func Find(ctx context.Context, db *sql.DB, limit int) (Report, error) {
 	if err != nil {
 		return r, err
 	}
-	r.Groups = append(content, notCovered(editions, content)...)
+	r.Groups = append(append([]Group{}, content...), notCovered(editions, content)...) // [] e não null sem grupos
 	if len(r.Groups) > limit {
 		r.Groups, r.More = r.Groups[:limit], true
 	}
