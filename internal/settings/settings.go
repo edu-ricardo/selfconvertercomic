@@ -19,8 +19,17 @@ type Settings struct {
 	Notifications Notifications `json:"notifications"`
 	Readers       Readers       `json:"readers"`
 	Metadata      Metadata      `json:"metadata"`
+	Organize      Organize      `json:"organize"`
 	Backup        Backup        `json:"backup"`
 }
+
+// Organize guarda o padrão de pastas e nomes (RF-40). As variáveis estão em internal/organize.
+type Organize struct {
+	Template string `json:"template"`
+}
+
+// DefaultTemplate é o padrão de organização da especificação.
+const DefaultTemplate = "{editora}/{serie} ({ano})/{serie} ({ano}) #{numero}"
 
 type Conversion struct {
 	AutoConvert      bool   `json:"autoConvert"`
@@ -76,6 +85,7 @@ func Defaults() Settings {
 		Scan:          Scan{RescanHours: 6},
 		Notifications: Notifications{OnError: true},
 		Metadata:      Metadata{AutoIdentify: true, GCDEnabled: true, RateSeconds: 2, CacheDays: 30},
+		Organize:      Organize{Template: DefaultTemplate},
 		Backup:        Backup{Daily: true, Keep: 7},
 	}
 }
@@ -130,6 +140,11 @@ func (s Settings) Validate() error {
 		if err != nil || (p.Scheme != "http" && p.Scheme != "https") || p.Host == "" {
 			f[name] = "URL inválida (use http:// ou https://)"
 		}
+	}
+	if t := s.Organize.Template; !strings.Contains(t, "{serie}") {
+		f["organize.template"] = "precisa ter {serie}"
+	} else if strings.HasPrefix(t, "/") || strings.Contains(t, "..") || strings.Contains(t, "\\") {
+		f["organize.template"] = "use só caminhos relativos à biblioteca, com /, sem .."
 	}
 	if s.Notifications.NtfyURL != "" && s.Notifications.NtfyTopic == "" {
 		f["notifications.ntfyTopic"] = "obrigatório quando o ntfy está configurado"

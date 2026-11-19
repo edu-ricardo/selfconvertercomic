@@ -31,12 +31,19 @@ func fakeGCD(hits *atomic.Int32) *httptest.Server {
 		switch r.URL.Path {
 		case "/api/series/name/Guerras Secretas/":
 			fmt.Fprintf(w, `{"results":[{"api_url":"%[1]s/series/41527/","name":"Secret Wars (Guerras Secretas)","language":"pt",
-				"year_began":"1986","active_issues":["%[1]s/issue/726769/","%[1]s/issue/726770/"],"issue_descriptors":["1","2"]}]}`, b)
+				"year_began":"1986","active_issues":["%[1]s/issue/726769/","%[1]s/issue/726770/","%[1]s/issue/726771/"],
+				"issue_descriptors":["1","2","3"]}]}`, b)
 		case "/api/series/name/Os Novos Vingadores/":
 			fmt.Fprintf(w, `{"results":[{"api_url":"%[1]s/series/900/","name":"Os Vingadores","language":"pt","year_began":2015,
 				"active_issues":["%[1]s/issue/901/"],"issue_descriptors":["25"]}]}`, b)
 		case "/api/series/41527/", "/api/series/900/":
-			fmt.Fprint(w, `{"name":"x","language":"pt"}`)
+			fmt.Fprintf(w, `{"name":"x","language":"pt","year_began":"1986","publisher":"%s/publisher/4738/"}`, b)
+		case "/api/publisher/4738/":
+			fmt.Fprint(w, `{"name":"Editora Abril"}`)
+		case "/api/issue/726771/":
+			// Cadastro incompleto (como as #3–#12 reais da Abril): sem data, editora nem histórias.
+			fmt.Fprintf(w, `{"api_url":"%s/issue/726771/","number":"3","title":"","key_date":"","indicia_publisher":"",
+				"series":"%s/series/41527/","cover":"","story_set":[]}`, b, b)
 		case "/api/issue/726769/", "/api/issue/726770/", "/api/issue/901/":
 			id := strings.Split(strings.Trim(r.URL.Path, "/"), "/")[2]
 			num := map[string]string{"726769": "1", "726770": "2", "901": "25"}[id]
@@ -187,7 +194,7 @@ func TestIdentifyAppliesOrOpensTask(t *testing.T) {
 	ci := comicInfoOf(t, cbz1)
 	for _, want := range []string{"<Series>Secret Wars (Guerras Secretas)</Series>", "<Number>1</Number>", "<Title>A Guerra Se Inicia</Title>",
 		"<Writer>Jim Shooter</Writer>", "<Penciller>Mike Zeck</Penciller>", "<Inker>John Beatty</Inker>", "<Letterer>Joe Rosen</Letterer>",
-		"<CoverArtist>Mike Zeck</CoverArtist>", "<Publisher>Editora Abril S.A.</Publisher>", "<Year>1986</Year>", "<Month>8</Month>",
+		"<CoverArtist>Mike Zeck</CoverArtist>", "<Publisher>Editora Abril</Publisher>", "<Year>1986</Year>", "<Month>8</Month>",
 		"<LanguageISO>pt</LanguageISO>", "<Web>", "/issue/726769/", "<PageCount>2</PageCount>", "CC BY-SA"} {
 		if !strings.Contains(ci, want) {
 			t.Errorf("ComicInfo sem %q:\n%s", want, ci)
@@ -210,6 +217,17 @@ func TestIdentifyAppliesOrOpensTask(t *testing.T) {
 	e.drain(t)
 	if ci := comicInfoOf(t, cbz2); !strings.Contains(ci, "<Number>2</Number>") || e.hits.Load() != hits {
 		t.Errorf("regravação: pedidos %d, ComicInfo:\n%s", e.hits.Load()-hits, ci)
+	}
+
+	// Edição com cadastro incompleto no GCD: ano e editora vêm da série (todas as edições ficam iguais).
+	cbz3 := e.cbz(t, gs+"Capítulo 03.cbz")
+	e.scan(t)
+	e.drain(t)
+	if ed := e.edition(t, gs+"Capítulo 03"); ed.Status != StatusApplied || ed.Applied.Year != 1986 || ed.Applied.Publisher != "Editora Abril" {
+		t.Errorf("Capítulo 03 (cadastro incompleto): %+v", ed.Applied)
+	}
+	if ci := comicInfoOf(t, cbz3); !strings.Contains(ci, "<Year>1986</Year>") || !strings.Contains(ci, "<Publisher>Editora Abril</Publisher>") {
+		t.Errorf("ComicInfo do Capítulo 03:\n%s", ci)
 	}
 
 	// Confiança baixa → tarefa com os candidatos, ligada a um arquivo da edição.

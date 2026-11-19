@@ -21,6 +21,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
 	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
+	"github.com/edu-ricardo/selfconvertercomic/internal/organize"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 	"github.com/edu-ricardo/selfconvertercomic/internal/tasks"
 )
@@ -75,6 +76,8 @@ func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.
 		Backups:    &backup.Manager{DB: conn, Dir: t.TempDir(), Settings: st, Version: version},
 		Identifier: &identify.Identifier{DB: conn, Finder: finder, Tasks: tasks.NewStore(conn), Settings: st.Get},
 		Metadata:   finder,
+		Organizer: &organize.Organizer{DB: conn, Libraries: libs,
+			Exclusive: func(_ int64, fn func() error) error { return fn() }},
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
 			l, err := libs.Get(ctx, id)
 			return l.Path, l.Name, err

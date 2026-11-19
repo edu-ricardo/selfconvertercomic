@@ -21,6 +21,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
 	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
+	"github.com/edu-ricardo/selfconvertercomic/internal/organize"
 	"github.com/edu-ricardo/selfconvertercomic/internal/server"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 	"github.com/edu-ricardo/selfconvertercomic/internal/tasks"
@@ -146,6 +147,7 @@ func main() {
 			Backups:    backups,
 			Metadata:   finder,
 			Identifier: identifier,
+			Organizer:  &organize.Organizer{DB: conn, Libraries: libraries, Exclusive: scanner.Exclusive},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

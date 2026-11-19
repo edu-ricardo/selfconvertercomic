@@ -79,10 +79,24 @@ func (g *GCD) Details(ctx context.Context, issueID string, lim Limits) (Details,
 	d := Details{Provider: "gcd", IssueID: issueID, URL: siteURL(is.APIURL), Number: is.Number, Title: is.Title,
 		Publisher: is.IndiciaPublisher, CoverURL: is.Cover, Series: seriesYearSuffix.ReplaceAllString(is.SeriesName, "")}
 	d.Year, d.Month = dateParts(is.KeyDate)
+	// A editora é a da série (o "expediente" de cada edição varia: "Editora Abril S.A.", "Abril Jovem"…) e
+	// edições com cadastro incompleto no GCD herdam o ano da série: todas as edições de uma série ficam
+	// iguais (mesma pasta ao organizar).
 	if is.Series != "" {
 		var ser gcdSeries
 		if err := g.get(ctx, "/series/"+lastSegment(is.Series)+"/", lim, &ser); err == nil {
 			d.Language = ser.Language
+			if d.Year == 0 {
+				d.Year, _ = strconv.Atoi(fmt.Sprint(ser.YearBegan))
+			}
+			if ser.Publisher != "" {
+				var pub struct {
+					Name string `json:"name"`
+				}
+				if err := g.get(ctx, "/publisher/"+lastSegment(ser.Publisher)+"/", lim, &pub); err == nil && pub.Name != "" {
+					d.Publisher = pub.Name
+				}
+			}
 		}
 	}
 	for _, st := range is.Stories {

@@ -13,6 +13,7 @@
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import BookIcon from '@lucide/svelte/icons/book';
 	import SparklesIcon from '@lucide/svelte/icons/sparkles';
+	import FolderTreeIcon from '@lucide/svelte/icons/folder-tree';
 	import { toast } from 'svelte-sonner';
 
 	const PAGE = 60;
@@ -75,6 +76,14 @@
 	{#snippet actions()}
 		<Button variant="outline" size="sm" disabled={!items?.length} onclick={identifySeries}>
 			<SparklesIcon /> Identificar série
+		</Button>
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={!items?.length}
+			href="/organizar?library={items?.[0]?.libraryId ?? ''}&series={encodeURIComponent(key)}"
+		>
+			<FolderTreeIcon /> Organizar série
 		</Button>
 	{/snippet}
 </PageHeader>

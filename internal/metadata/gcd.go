@@ -23,6 +23,7 @@ type gcdSeries struct {
 	Country     string   `json:"country"`
 	Language    string   `json:"language"`
 	YearBegan   any      `json:"year_began"` // número ou texto, conforme o recurso
+	Publisher   string   `json:"publisher"`  // endereço da editora na API
 	Issues      []string `json:"active_issues"`
 	Descriptors []string `json:"issue_descriptors"`
 }

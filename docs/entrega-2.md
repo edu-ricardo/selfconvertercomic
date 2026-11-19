@@ -111,13 +111,36 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
   biblioteca inteira só pelo GCD leva horas** (em segundo plano); com a chave do ComicVine é bem mais
   rápido. (2) Erros de identificação não iam para o log; agora vão.
 
-### M11 — Organização (plano, aplicar, desfazer)
+### M11 — Organização (plano, aplicar, desfazer) ✅
 - Template configurável (`{editora}/{serie} ({ano})/{serie} ({ano}) #{numero}`), com prévia ao digitar.
 - Plano por biblioteca/série: lista antes → depois, conflitos (destino existe, nomes iguais) marcados;
   aplicar só os itens aprovados; edição move PDF e CBZ juntos.
 - Histórico de operações com **desfazer**; movimento entre discos com conferência de hash.
 - **Verificar:** testes de plano/aplicar/desfazer (mesmo disco e entre discos, conflito, falha no meio
   deixa tudo consistente); na pasta do 1984: aplicar e desfazer restauram nomes e caminhos exatos.
+- **Resultado (2026-11-19):** `internal/organize` + tela **Organizar** (biblioteca, série opcional vinda do
+  catálogo, template com prévia ao digitar, marcar/desmarcar, confirmar, histórico com "Desfazer").
+  Variáveis `{editora} {serie} {ano} {numero} {numero3} {volume} {titulo} {original}`; o que veio das
+  fontes tem preferência sobre o nome; partes vazias somem ("Série () #" → "Série"); caracteres que
+  exFAT/NTFS recusam são trocados e cada pasta/nome fica com até 150 bytes; sem série ou número a edição
+  não é movida. Conflitos marcados e nunca aplicados: destino ocupado e duas edições indo para o mesmo nome
+  (ex.: a árvore duplicada `arquivospdf/...`). Aplicar refaz o plano das edições aprovadas e move uma
+  edição por vez (PDF e CBZ juntos) **sem varredura ao mesmo tempo** (`library.Manager.Exclusive`): o banco
+  (arquivos, edição, tarefa) é atualizado junto, então a edição e os metadados continuam os mesmos; uma
+  falha devolve a edição em andamento e para (`partial`); pastas que esvaziam são apagadas. Desfazer
+  confere antes que nada mudou e devolve tudo. Movimento em `internal/fsutil` (também usado pela
+  conversão, que antes podia sobrescrever na pasta de arquivo): **nunca sobrescreve**, entre discos copia
+  → confere o **SHA-256** → apaga a origem, e trata a troca só de maiúsculas/minúsculas (exFAT/NTFS) sem
+  confundir com outro arquivo num disco que diferencia. **Teste real** (biblioteca local do M10): as 12
+  edições de 1984 organizadas pela tela em `Editora Abril/Secret Wars (Guerras Secretas) (1986)/…`, pasta
+  antiga apagada, varredura seguinte sem nada novo nem sumido e metadados mantidos; "Desfazer" deixou os
+  16 arquivos **idênticos** (mesmos caminhos e SHA-256). **Achado:** a prévia mostrou a série partida em
+  duas pastas — o GCD só tem data e editora nas #1–#2 da Abril; agora os detalhes do GCD herdam o ano da
+  série e usam a editora da série (o "expediente" muda de edição para edição), e a prévia ordena os
+  números pelo valor (#2 antes de #10). **Limites:** a identificação (M10) grava o `ComicInfo.xml` fora do
+  bloqueio da varredura — se ela regravar um CBZ no mesmo instante em que a organização o move, a
+  regravação falha e a edição fica com erro (basta "Identificar de novo"); Kavita/BookOrbit veem os
+  caminhos novos na próxima varredura deles.
 
 ### M12 — Duplicados
 - Hash do conteúdo calculado em segundo plano (sem bloquear a varredura); grupos por conteúdo igual e

@@ -30,6 +30,10 @@ type Manager struct {
 	watched    map[string]int64 // pasta → biblioteca
 	watchError string
 
+	// scanMu é segurado durante cada varredura e por Exclusive: quem move arquivos e atualiza o banco
+	// junto (organização) não pode ser intercalado com uma varredura.
+	scanMu sync.Mutex
+
 	watcher *fsnotify.Watcher
 	// OnScan é chamado após cada varredura bem-sucedida (o M3 usa para enfileirar conversões).
 	OnScan func(Library, Result)
@@ -117,6 +121,16 @@ func (m *Manager) Forget(id int64) {
 	}
 }
 
+// Exclusive roda fn sem nenhuma varredura ao mesmo tempo (as pedidas nesse meio esperam) e, no fim,
+// pede a varredura da biblioteca libID para conferir o resultado.
+func (m *Manager) Exclusive(libID int64, fn func() error) error {
+	m.scanMu.Lock()
+	err := fn()
+	m.scanMu.Unlock()
+	m.Enqueue(libID)
+	return err
+}
+
 // EnqueueAll pede a varredura de todas as bibliotecas (ex.: depois de restaurar um backup).
 func (m *Manager) EnqueueAll(ctx context.Context) { m.enqueueAll(ctx) }
 
@@ -169,7 +183,9 @@ func (m *Manager) scan(ctx context.Context, id int64) {
 		}
 		return
 	}
+	m.scanMu.Lock()
 	res, err := m.store.Scan(ctx, lib)
+	m.scanMu.Unlock()
 	if errors.Is(err, ErrUnavailable) {
 		// O disco sumiu: as observações caíram junto. Esquece-as para refazê-las quando ele voltar.
 		m.Forget(id)
