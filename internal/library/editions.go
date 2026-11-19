@@ -26,7 +26,11 @@ type editionRow struct {
 // syncEditions liga cada arquivo da biblioteca à sua edição (criando as que faltam), reanalisa as
 // edições identificadas pelo nome com versão antiga do analisador, apaga as edições sem arquivos e
 // refaz a inferência de números pela ordem de leitura.
-func syncEditions(ctx context.Context, tx *sql.Tx, libID int64) error {
+//
+// Só a edição de um arquivo que acabou de aparecer (added) nasce "new" — identificada sozinha se a
+// identificação automática estiver ligada. As de arquivos que já estavam no catálogo (ex.: o banco de
+// uma versão anterior, que ainda não tinha edições) nascem sem pedido: esperam o "Identificar".
+func syncEditions(ctx context.Context, tx *sql.Tx, libID int64, added map[string]bool) error {
 	eds, err := loadEditions(ctx, tx, libID)
 	if err != nil {
 		return err
@@ -61,7 +65,7 @@ func syncEditions(ctx context.Context, tx *sql.Tx, libID int64) error {
 	}
 
 	insert, err := tx.PrepareContext(ctx, `INSERT INTO editions (library_id, dir, stem, parser_version, meta_status)
-		VALUES (?, ?, ?, 0, 'new')`)
+		VALUES (?, ?, ?, 0, ?)`)
 	if err != nil {
 		return err
 	}
@@ -78,10 +82,18 @@ func syncEditions(ctx context.Context, tx *sql.Tx, libID int64) error {
 		return err
 	}
 	defer rewrite.Close()
+	keyAdded := map[editionKey]bool{}
+	for _, l := range links {
+		keyAdded[l.key] = keyAdded[l.key] || added[l.rel]
+	}
 	for _, l := range links {
 		e := byKey[l.key]
 		if e == nil {
-			res, err := insert.ExecContext(ctx, libID, l.key.dir, l.key.stem)
+			status := ""
+			if keyAdded[l.key] {
+				status = "new"
+			}
+			res, err := insert.ExecContext(ctx, libID, l.key.dir, l.key.stem, status)
 			if err != nil {
 				return err
 			}

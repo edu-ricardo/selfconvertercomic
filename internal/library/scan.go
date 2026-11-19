@@ -66,6 +66,7 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 		size, mtime int64
 	}
 	var changed []found
+	added := map[string]bool{} // arquivos que não estavam no catálogo
 	seen := make(map[string]bool, len(known))
 
 	walkErr := filepath.WalkDir(lib.Path, func(p string, d fs.DirEntry, err error) error {
@@ -146,6 +147,7 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 			res.Updated++
 		} else {
 			res.Added++
+			added[f.rel] = true
 		}
 	}
 
@@ -163,7 +165,7 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 		}
 	}
 	if len(changed) > 0 || res.Removed > 0 || stale {
-		if err := syncEditions(ctx, tx, lib.ID); err != nil {
+		if err := syncEditions(ctx, tx, lib.ID, added); err != nil {
 			return res, err
 		}
 	}
