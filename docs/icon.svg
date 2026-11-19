@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- QuadrinhoTeca: página de quadrinho com balão de fala -->
+  <rect width="256" height="256" fill="#18181b"/>
+  <rect x="52" y="40" width="152" height="184" rx="10" fill="#fafafa"/>
+  <rect x="64" y="52" width="60" height="70" rx="4" fill="#f59e0b"/>
+  <rect x="132" y="52" width="60" height="70" rx="4" fill="#3b82f6"/>
+  <rect x="64" y="130" width="128" height="82" rx="4" fill="#ef4444"/>
+  <path d="M150 150 h44 a12 12 0 0 1 12 12 v20 a12 12 0 0 1 -12 12 h-22 l-14 14 v-14 h-8 a12 12 0 0 1 -12 -12 v-20 a12 12 0 0 1 12 -12 z"
+        fill="#fafafa" stroke="#18181b" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="160" cy="172" r="4" fill="#18181b"/>
+  <circle cx="172" cy="172" r="4" fill="#18181b"/>
+  <circle cx="184" cy="172" r="4" fill="#18181b"/>
+</svg>
