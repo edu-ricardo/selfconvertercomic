@@ -12,6 +12,7 @@ import (
 
 	"github.com/edu-ricardo/selfconvertercomic/internal/backup"
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
+	"github.com/edu-ricardo/selfconvertercomic/internal/identify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
@@ -22,20 +23,21 @@ import (
 
 // Deps são as dependências das rotas.
 type Deps struct {
-	Version   string
-	UI        fs.FS
-	Settings  *settings.Store
-	Libraries *library.Store
-	Roots     library.Roots
-	Scanner   *library.Manager
-	Jobs      *jobs.Store
-	Runner    *jobs.Runner
-	Catalog   *catalog.Store
-	Thumbs    *catalog.Thumbnailer
-	Tasks     *tasks.Store
-	Notifier  *notify.Notifier
-	Backups   *backup.Manager
-	Metadata  *metadata.Finder
+	Version    string
+	UI         fs.FS
+	Settings   *settings.Store
+	Libraries  *library.Store
+	Roots      library.Roots
+	Scanner    *library.Manager
+	Jobs       *jobs.Store
+	Runner     *jobs.Runner
+	Catalog    *catalog.Store
+	Thumbs     *catalog.Thumbnailer
+	Tasks      *tasks.Store
+	Notifier   *notify.Notifier
+	Backups    *backup.Manager
+	Metadata   *metadata.Finder
+	Identifier *identify.Identifier
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.

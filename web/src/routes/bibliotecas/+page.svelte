@@ -16,6 +16,7 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import FileArchiveIcon from '@lucide/svelte/icons/file-archive';
+	import SparklesIcon from '@lucide/svelte/icons/sparkles';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
@@ -86,6 +87,17 @@
 		try {
 			const { queued } = await api.convertLibrary(l.id);
 			toast.success(queued ? `${queued} PDF(s) na fila de conversão` : 'Nenhum PDF pendente');
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Falha');
+		}
+	}
+
+	async function identifyAll(l: Library) {
+		try {
+			const { queued } = await api.identifyLibrary(l.id);
+			toast.success(
+				queued ? `${queued} edição(ões) na fila de identificação` : 'Nenhuma edição sem metadados (as com tarefa esperam confirmação)'
+			);
 		} catch (e) {
 			toast.error(e instanceof Error ? e.message : 'Falha');
 		}
@@ -168,6 +180,9 @@
 				<Card.Footer class="flex flex-wrap justify-end gap-2">
 					<Button variant="outline" size="sm" disabled={!l.available || l.counts.pdf === 0} onclick={() => convertAll(l)}>
 						<FileArchiveIcon /> Converter PDFs
+					</Button>
+					<Button variant="outline" size="sm" disabled={!l.available} onclick={() => identifyAll(l)}>
+						<SparklesIcon /> Identificar metadados
 					</Button>
 					<Button variant="outline" size="sm" disabled={l.scanning} onclick={() => scanNow(l)}>
 						<RefreshCwIcon /> Varrer agora

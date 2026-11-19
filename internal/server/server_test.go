@@ -16,6 +16,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/identify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
@@ -53,24 +54,27 @@ func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.
 	libs := library.NewStore(conn)
 	st := settings.NewStore(conn)
 	js := jobs.NewStore(conn)
+	// Fontes de metadados num endereço sem ninguém: simula serviço fora do ar.
+	finder := &metadata.Finder{
+		ComicVine: &metadata.ComicVine{F: &metadata.Fetcher{Provider: "ComicVine", DB: conn, Client: http.DefaultClient}, BaseURL: "http://127.0.0.1:1"},
+		GCD:       &metadata.GCD{F: &metadata.Fetcher{Provider: "GCD", DB: conn, Client: http.DefaultClient}, BaseURL: "http://127.0.0.1:1"},
+		Settings:  st.Get,
+	}
 	return conn, New(Deps{
-		Version:   version,
-		UI:        testUI(),
-		Settings:  st,
-		Libraries: libs,
-		Roots:     roots,
-		Scanner:   library.NewManager(libs, func() time.Duration { return time.Hour }),
-		Jobs:      js,
-		Catalog:   catalog.NewStore(conn),
-		Thumbs:    &catalog.Thumbnailer{Dir: t.TempDir()},
-		Tasks:     tasks.NewStore(conn),
-		Notifier:  &notify.Notifier{Settings: st},
-		Backups:   &backup.Manager{DB: conn, Dir: t.TempDir(), Settings: st, Version: version},
-		Metadata: &metadata.Finder{
-			ComicVine: &metadata.ComicVine{F: &metadata.Fetcher{Provider: "ComicVine", DB: conn, Client: http.DefaultClient}, BaseURL: "http://127.0.0.1:1"},
-			GCD:       &metadata.GCD{F: &metadata.Fetcher{Provider: "GCD", DB: conn, Client: http.DefaultClient}, BaseURL: "http://127.0.0.1:1"},
-			Settings:  st.Get,
-		},
+		Version:    version,
+		UI:         testUI(),
+		Settings:   st,
+		Libraries:  libs,
+		Roots:      roots,
+		Scanner:    library.NewManager(libs, func() time.Duration { return time.Hour }),
+		Jobs:       js,
+		Catalog:    catalog.NewStore(conn),
+		Thumbs:     &catalog.Thumbnailer{Dir: t.TempDir()},
+		Tasks:      tasks.NewStore(conn),
+		Notifier:   &notify.Notifier{Settings: st},
+		Backups:    &backup.Manager{DB: conn, Dir: t.TempDir(), Settings: st, Version: version},
+		Identifier: &identify.Identifier{DB: conn, Finder: finder, Tasks: tasks.NewStore(conn), Settings: st.Get},
+		Metadata:   finder,
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
 			l, err := libs.Get(ctx, id)
 			return l.Path, l.Name, err

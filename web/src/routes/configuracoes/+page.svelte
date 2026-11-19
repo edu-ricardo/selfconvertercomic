@@ -226,6 +226,16 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="grid gap-4 sm:grid-cols-2">
+				<div class="flex items-start justify-between gap-4 sm:col-span-2">
+					<div class="grid gap-1">
+						<Label for="autoIdentify">Identificar edições novas automaticamente</Label>
+						<p class="text-muted-foreground text-xs">
+							Com nota 85 ou mais, os metadados são aplicados sozinhos; abaixo disso, vira uma tarefa de
+							confirmação. Para as edições que já existiam, use "Identificar metadados" em Bibliotecas.
+						</p>
+					</div>
+					<Switch id="autoIdentify" bind:checked={s.metadata.autoIdentify} />
+				</div>
 				<div class="grid gap-1.5 sm:col-span-2">
 					<Label for="cv">Chave de API do ComicVine</Label>
 					<Input id="cv" type="password" autocomplete="off" bind:value={s.metadata.comicVineApiKey} />

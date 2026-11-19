@@ -7,6 +7,7 @@
 	import { api, type Task, type TaskStatus } from '$lib/api';
 	import { refreshTaskCount } from '$lib/task-count.svelte';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
+	import SearchCheckIcon from '@lucide/svelte/icons/search-check';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
 
@@ -103,6 +104,11 @@
 					</div>
 					{#if t.status === 'open'}
 						<div class="flex gap-1">
+							{#if t.kind === 'metadata_confirm'}
+								<Button size="sm" variant="outline" href="/catalogo/arquivo/{t.refId}">
+									<SearchCheckIcon /> Confirmar
+								</Button>
+							{/if}
 							{#if t.kind === 'conversion_error' && t.title.startsWith('Erro')}
 								<Button size="sm" variant="outline" onclick={() => act(() => api.retryTask(t.id), 'De volta à fila de conversão')}>
 									<RotateCcwIcon /> Tentar de novo

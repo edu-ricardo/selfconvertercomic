@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,9 +22,19 @@ var (
 
 // ProviderError diz qual provedor falhou e por quê (Unwrap devolve um dos Err* acima).
 type ProviderError struct {
-	Provider string
-	Kind     error
-	Detail   string
+	Provider   string
+	Kind       error
+	Detail     string
+	RetryAfter time.Duration // limite atingido: quanto a fonte pediu para esperar (0 = não disse)
+}
+
+// RetryAfter devolve quanto esperar quando err é um limite de pedidos (0 se não for ou não se sabe).
+func RetryAfter(err error) time.Duration {
+	var pe *ProviderError
+	if errors.As(err, &pe) && errors.Is(pe.Kind, ErrRateLimited) {
+		return pe.RetryAfter
+	}
+	return 0
 }
 
 func (e *ProviderError) Error() string {
@@ -49,8 +61,9 @@ type Fetcher struct {
 	UserAgent string
 	Now       func() time.Time
 
-	mu   sync.Mutex
-	last time.Time
+	mu      sync.Mutex
+	last    time.Time
+	blocked time.Time // a fonte pediu para esperar até aqui (Retry-After)
 }
 
 // MaxBody limita o tamanho de uma resposta.
@@ -79,6 +92,14 @@ func (f *Fetcher) Get(ctx context.Context, cacheKey, url string, lim Limits, che
 	}
 	if check != nil {
 		if err := check(body); err != nil {
+			var pe *ProviderError
+			if errors.As(err, &pe) && errors.Is(pe.Kind, ErrRateLimited) {
+				// Limite avisado no corpo (código 107 do ComicVine): bloqueia como o HTTP 429.
+				f.mu.Lock()
+				f.blocked = f.now().Add(defaultBlock)
+				f.mu.Unlock()
+				pe.RetryAfter = defaultBlock
+			}
 			return nil, err
 		}
 	}
@@ -97,6 +118,10 @@ func (f *Fetcher) Get(ctx context.Context, cacheKey, url string, lim Limits, che
 func (f *Fetcher) fetch(ctx context.Context, url string, interval time.Duration) ([]byte, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	// Enquanto a fonte pedir espera, nem tenta: insistir só estende o bloqueio.
+	if left := f.blocked.Sub(f.now()); left > 0 {
+		return nil, &ProviderError{f.Provider, ErrRateLimited, fmt.Sprintf("liberado em %s", left.Round(time.Second)), left}
+	}
 	if wait := interval - f.now().Sub(f.last); wait > 0 && !f.last.IsZero() {
 		select {
 		case <-time.After(wait):
@@ -117,25 +142,38 @@ func (f *Fetcher) fetch(ctx context.Context, url string, interval time.Duration)
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, &ProviderError{f.Provider, ErrUnavailable, err.Error()}
+		return nil, &ProviderError{Provider: f.Provider, Kind: ErrUnavailable, Detail: err.Error()}
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(res.Body, MaxBody))
 	if err != nil {
-		return nil, &ProviderError{f.Provider, ErrUnavailable, err.Error()}
+		return nil, &ProviderError{Provider: f.Provider, Kind: ErrUnavailable, Detail: err.Error()}
 	}
 	switch {
 	case res.StatusCode == http.StatusOK:
 		return body, nil
 	case res.StatusCode == http.StatusUnauthorized:
-		return nil, &ProviderError{f.Provider, ErrUnauthorized, ""}
+		return nil, &ProviderError{Provider: f.Provider, Kind: ErrUnauthorized, Detail: ""}
 	case res.StatusCode == 420 || res.StatusCode == http.StatusTooManyRequests:
-		return nil, &ProviderError{f.Provider, ErrRateLimited, ""}
+		wait := retryAfter(res.Header.Get("Retry-After"))
+		f.blocked = f.now().Add(wait)
+		return nil, &ProviderError{f.Provider, ErrRateLimited, fmt.Sprintf("liberado em %s", wait.Round(time.Second)), wait}
 	case res.StatusCode == http.StatusNotFound:
 		return nil, errNotFound
 	default:
-		return nil, &ProviderError{f.Provider, ErrUnavailable, res.Status}
+		return nil, &ProviderError{Provider: f.Provider, Kind: ErrUnavailable, Detail: res.Status}
 	}
+}
+
+// defaultBlock é a espera quando a fonte diz que o limite foi atingido sem dizer por quanto tempo.
+const defaultBlock = 15 * time.Minute
+
+// retryAfter lê o cabeçalho Retry-After em segundos (o GCD manda assim); senão, defaultBlock.
+func retryAfter(h string) time.Duration {
+	if s, err := strconv.Atoi(strings.TrimSpace(h)); err == nil && s > 0 {
+		return time.Duration(s) * time.Second
+	}
+	return defaultBlock
 }
 
 // errNotFound: o recurso não existe (ex.: página além da última); não é falha do provedor.

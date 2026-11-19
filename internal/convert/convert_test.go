@@ -229,3 +229,82 @@ func TestConvertRealSamples(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteComicInfoKeepsPages(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "Capítulo 01.cbz")
+	f, _ := os.Create(path)
+	zw := zip.NewWriter(f)
+	pages := map[string][]byte{}
+	for i := range 3 {
+		name := fmt.Sprintf("%03d.jpg", i+1)
+		pages[name] = bytes.Repeat([]byte{0xFF, 0xD8, byte(i)}, 1000)
+		w, _ := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate})
+		w.Write(pages[name])
+	}
+	w, _ := zw.Create("ComicInfo.xml")
+	w.Write([]byte("<ComicInfo><Title>antigo</Title></ComicInfo>"))
+	zw.Close()
+	f.Close()
+	before := zipEntries(t, path)
+
+	ci := ComicInfo{Series: "Secret Wars (Guerras Secretas)", Number: "1", Title: "A Guerra Se Inicia", Year: 1986, Month: 8,
+		Writer: "Jim Shooter", Penciller: "Mike Zeck", Publisher: "Editora Abril", LanguageISO: "pt",
+		Web: "https://www.comics.org/issue/726769/", PageCount: 99}
+	if err := WriteComicInfo(path, ci); err != nil {
+		t.Fatal(err)
+	}
+	after := zipEntries(t, path)
+	for name := range pages {
+		if before[name] != after[name] {
+			t.Errorf("%s mudou: %s → %s", name, before[name], after[name])
+		}
+	}
+	info := readEntry(t, path, "ComicInfo.xml")
+	for _, want := range []string{"<Series>Secret Wars (Guerras Secretas)</Series>", "<Number>1</Number>", "<Writer>Jim Shooter</Writer>",
+		"<Penciller>Mike Zeck</Penciller>", "<LanguageISO>pt</LanguageISO>", "<PageCount>3</PageCount>", "<Month>8</Month>"} {
+		if !strings.Contains(info, want) {
+			t.Errorf("ComicInfo sem %s:\n%s", want, info)
+		}
+	}
+	if strings.Contains(info, "antigo") || len(after) != 4 {
+		t.Errorf("ComicInfo antigo deveria ser trocado: %d entradas\n%s", len(after), info)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 {
+		t.Errorf("sobrou temporário: %v", entries)
+	}
+}
+
+// zipEntries resume cada entrada (método, CRC e tamanho compactado): iguais = bytes idênticos.
+func zipEntries(t *testing.T, path string) map[string]string {
+	t.Helper()
+	zr, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zr.Close()
+	m := map[string]string{}
+	for _, f := range zr.File {
+		m[f.Name] = fmt.Sprintf("%d/%08x/%d", f.Method, f.CRC32, f.CompressedSize64)
+	}
+	return m
+}
+
+func readEntry(t *testing.T, path, name string) string {
+	t.Helper()
+	zr, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zr.Close()
+	for _, f := range zr.File {
+		if f.Name == name {
+			rc, _ := f.Open()
+			b, _ := io.ReadAll(rc)
+			rc.Close()
+			return string(b)
+		}
+	}
+	t.Fatalf("%s sem %s", path, name)
+	return ""
+}

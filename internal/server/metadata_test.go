@@ -52,6 +52,36 @@ func TestMetadataAPI(t *testing.T) {
 		t.Errorf("testar sem chave: %d %s", rec.Code, rec.Body.String())
 	}
 
+	// Identificar: a edição entra na fila e o detalhe do arquivo mostra o estado.
+	if rec := do(t, h, http.MethodPost, "/api/files/"+id+"/identify", ""); rec.Code != http.StatusAccepted {
+		t.Errorf("identificar arquivo: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := get(t, h, "/api/files/"+id); !strings.Contains(rec.Body.String(), `"status":"queued"`) {
+		t.Errorf("detalhe sem o estado da edição: %s", rec.Body.String())
+	}
+	if rec := do(t, h, http.MethodPost, "/api/libraries/"+jsonID(lib.ID)+"/identify", ""); rec.Code != http.StatusAccepted ||
+		!strings.Contains(rec.Body.String(), `"queued":0`) { // já está na fila
+		t.Errorf("identificar biblioteca: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(t, h, http.MethodPost, "/api/libraries/999/identify", ""); rec.Code != http.StatusNotFound {
+		t.Errorf("biblioteca inexistente: %d", rec.Code)
+	}
+	if rec := do(t, h, http.MethodPost, "/api/catalog/series/identify?library="+jsonID(lib.ID)+"&series=guerrassecretas", ""); rec.Code != http.StatusAccepted {
+		t.Errorf("identificar série: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(t, h, http.MethodPost, "/api/catalog/series/identify", ""); rec.Code != http.StatusBadRequest {
+		t.Errorf("série sem parâmetros: %d", rec.Code)
+	}
+	if rec := do(t, h, http.MethodPost, "/api/files/"+id+"/metadata", `{"provider":"outro","issueId":"1"}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("aplicar com fonte inválida: %d", rec.Code)
+	}
+	if rec := do(t, h, http.MethodPost, "/api/files/"+id+"/metadata", `{"provider":"gcd","issueId":"1"}`); rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("aplicar com o GCD fora: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := get(t, h, "/api/files/"+id+"/candidates?series="); rec.Code != http.StatusBadRequest {
+		t.Errorf("busca manual sem série: %d", rec.Code)
+	}
+
 	s := settings.Defaults()
 	s.Metadata.GCDEnabled = false
 	settings.NewStore(conn).Put(context.Background(), s)
