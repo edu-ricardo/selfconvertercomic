@@ -49,12 +49,30 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
   ordena por número e busca também pela série; 10 mil arquivos: séries em 29–65 ms (a 1ª versão levou 3 s
   na última página — capa calculada para todas as séries; corrigido calculando só para as da página).
 
-### M9 — Provedores ComicVine e GCD
+### M9 — Provedores ComicVine e GCD ✅
 - Clientes com ritmo, cache, tempo-limite e erros claros (chave inválida, limite atingido, serviço fora).
 - Busca: volume por nome (+ ano) → edição por número; GCD por nome da série em pt.
 - Pontuação dos candidatos; botão "testar chave" nas configurações.
 - **Verificar:** testes com servidores falsos (`httptest`) para busca, cache (2ª busca sem pedido),
   ritmo e limite (HTTP 420/429); teste real único com a sua chave: `Secret Wars (1984) #1` encontrado.
+- **Resultado (2026-11-19):** `internal/metadata`: `Fetcher` por provedor (um pedido por vez, intervalo
+  configurável, User-Agent próprio sem dados do usuário, tempo-limite de 20 s, respostas boas no SQLite
+  por `cacheDays` sem a chave de API na chave do cache; erros tipados: chave inválida, limite atingido,
+  serviço fora). ComicVine: `search` de volumes → `issues` por volume + número; GCD: `series/name` (busca
+  por trecho) → edição pelo descritor. Abre só as 3 séries mais parecidas (cada uma custa um pedido).
+  Pontuação: nome (até 60; o nome buscado contido **palavra por palavra** no do candidato conta),
+  número (+20), ano (+15 … −20), português (+5); **sem ano, no máximo 75**. O analisador (versão 2) pega
+  o ano de uma pasta acima (`guerras_secretas/2015/…`). API: `GET /api/files/{id}/candidates`,
+  `POST /api/metadata/comicvine/test`; Configurações: chave + "Salvar e testar a chave", GCD liga/desliga
+  com atribuição CC BY-SA, intervalo e validade do cache (`guiaRateSeconds` virou `rateSeconds`, valor
+  salvo migrado). **Teste real** (GCD e ComicVine com a sua chave): *Guerras Secretas* (1984) #1 → edição
+  da Abril de 1986, "A Guerra Se Inicia" (85); *Magneto* #18 (2015) → GCD e ComicVine concordam (95);
+  falsos positivos achados na 1ª rodada e corrigidos (ficam abaixo de 85, viram tarefa no M10):
+  "Desafio Infinito" 2015 × edição de 1995 (sem ano no nome), "Os Novos Vingadores" × "Os Vingadores"
+  (letras contidas, palavras não), "Desafio Infinito" × "Infinito". O ComicVine tem muitos volumes da
+  Panini Brasil, então também serve para edições brasileiras. Bug achado: chave colada com espaço era
+  recusada; agora é aparada ao salvar. **Sem** o vínculo com a edição original: nenhuma das duas APIs o
+  expõe direto (o GCD não liga a edição BR à original pela API).
 
 ### M10 — Aplicar metadados e confirmar
 - Identificação em segundo plano (fila própria, retomável), automática para edições novas e manual

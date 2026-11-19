@@ -51,7 +51,8 @@ type Readers struct {
 
 type Metadata struct {
 	ComicVineAPIKey string `json:"comicVineApiKey"`
-	GuiaRateSeconds int    `json:"guiaRateSeconds"`
+	GCDEnabled      bool   `json:"gcdEnabled"`  // API do GCD (sem chave)
+	RateSeconds     int    `json:"rateSeconds"` // intervalo entre pedidos a cada provedor
 	CacheDays       int    `json:"cacheDays"`
 }
 
@@ -73,7 +74,7 @@ func Defaults() Settings {
 		},
 		Scan:          Scan{RescanHours: 6},
 		Notifications: Notifications{OnError: true},
-		Metadata:      Metadata{GuiaRateSeconds: 2, CacheDays: 30},
+		Metadata:      Metadata{GCDEnabled: true, RateSeconds: 2, CacheDays: 30},
 		Backup:        Backup{Daily: true, Keep: 7},
 	}
 }
@@ -102,7 +103,7 @@ func (s Settings) Validate() error {
 	between("conversion.turboWorkers", s.Conversion.TurboWorkers, 1, 16)
 	between("conversion.turboHours", s.Conversion.TurboHours, 1, 72)
 	between("scan.rescanHours", s.Scan.RescanHours, 1, 168)
-	between("metadata.guiaRateSeconds", s.Metadata.GuiaRateSeconds, 1, 60)
+	between("metadata.rateSeconds", s.Metadata.RateSeconds, 1, 60)
 	between("metadata.cacheDays", s.Metadata.CacheDays, 1, 365)
 	between("backup.keep", s.Backup.Keep, 1, 365)
 
@@ -158,11 +159,23 @@ func (st *Store) Get(ctx context.Context) (Settings, error) {
 	if err := json.Unmarshal([]byte(data), &s); err != nil {
 		return s, fmt.Errorf("configurações corrompidas no banco: %w", err)
 	}
+	// Até a M8 o intervalo se chamava guiaRateSeconds (o Guia dos Quadrinhos saiu do escopo).
+	var legacy struct {
+		Metadata struct {
+			Guia *int `json:"guiaRateSeconds"`
+			Rate *int `json:"rateSeconds"`
+		} `json:"metadata"`
+	}
+	if json.Unmarshal([]byte(data), &legacy) == nil && legacy.Metadata.Guia != nil && legacy.Metadata.Rate == nil {
+		s.Metadata.RateSeconds = *legacy.Metadata.Guia
+	}
 	return s, nil
 }
 
 // Put valida e grava as configurações.
 func (st *Store) Put(ctx context.Context, s Settings) error {
+	// Chave colada com espaço ou quebra de linha nas pontas é recusada pelo ComicVine.
+	s.Metadata.ComicVineAPIKey = strings.TrimSpace(s.Metadata.ComicVineAPIKey)
 	if err := s.Validate(); err != nil {
 		return err
 	}

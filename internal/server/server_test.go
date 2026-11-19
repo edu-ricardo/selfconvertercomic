@@ -18,6 +18,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
+	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
 	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 	"github.com/edu-ricardo/selfconvertercomic/internal/tasks"
@@ -65,6 +66,11 @@ func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.
 		Tasks:     tasks.NewStore(conn),
 		Notifier:  &notify.Notifier{Settings: st},
 		Backups:   &backup.Manager{DB: conn, Dir: t.TempDir(), Settings: st, Version: version},
+		Metadata: &metadata.Finder{
+			ComicVine: &metadata.ComicVine{F: &metadata.Fetcher{Provider: "ComicVine", DB: conn, Client: http.DefaultClient}, BaseURL: "http://127.0.0.1:1"},
+			GCD:       &metadata.GCD{F: &metadata.Fetcher{Provider: "GCD", DB: conn, Client: http.DefaultClient}, BaseURL: "http://127.0.0.1:1"},
+			Settings:  st.Get,
+		},
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {
 			l, err := libs.Get(ctx, id)
 			return l.Path, l.Name, err

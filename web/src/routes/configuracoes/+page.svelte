@@ -10,6 +10,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { api, ApiError, type Settings } from '$lib/api';
 	import SendIcon from '@lucide/svelte/icons/send';
+	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
 
 	let s = $state<Settings | null>(null);
 	let errors = $state<Record<string, string>>({});
@@ -45,6 +46,24 @@
 			toast.error(e instanceof Error ? e.message : 'Falha ao enviar');
 		} finally {
 			testing = false;
+		}
+	}
+
+	let testingKey = $state(false);
+
+	async function testKey() {
+		if (!s) return;
+		testingKey = true;
+		try {
+			s = await api.putSettings($state.snapshot(s));
+			errors = {};
+			await api.testComicVine();
+			toast.success('Chave do ComicVine aceita');
+		} catch (e) {
+			errors = e instanceof ApiError ? e.fields : {};
+			toast.error(e instanceof Error ? e.message : 'Falha ao testar');
+		} finally {
+			testingKey = false;
 		}
 	}
 
@@ -201,24 +220,46 @@
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>Metadados</Card.Title>
-				<Card.Description>Usados na entrega 2 (Guia dos Quadrinhos e ComicVine).</Card.Description>
+				<Card.Description>
+					Onde a QuadrinhoTeca procura série, número, créditos e capa: o GCD (edições brasileiras e
+					originais) e o ComicVine (edições originais, em inglês).
+				</Card.Description>
 			</Card.Header>
 			<Card.Content class="grid gap-4 sm:grid-cols-2">
 				<div class="grid gap-1.5 sm:col-span-2">
 					<Label for="cv">Chave de API do ComicVine</Label>
 					<Input id="cv" type="password" autocomplete="off" bind:value={s.metadata.comicVineApiKey} />
+					<p class="text-muted-foreground text-xs">
+						Gratuita em <a href="https://comicvine.gamespot.com/api/" target="_blank" rel="noopener" class="underline">comicvine.gamespot.com/api</a>.
+						Vazia = ComicVine desligado.
+					</p>
+				</div>
+				<div class="flex items-start justify-between gap-4 sm:col-span-2">
+					<div class="grid gap-1">
+						<Label for="gcd">Usar o Grand Comics Database (GCD)</Label>
+						<p class="text-muted-foreground text-xs">
+							Sem chave. Dados do <a href="https://www.comics.org" target="_blank" rel="noopener" class="underline">GCD</a>,
+							sob licença CC BY-SA 4.0.
+						</p>
+					</div>
+					<Switch id="gcd" bind:checked={s.metadata.gcdEnabled} />
 				</div>
 				<div class="grid gap-1.5">
-					<Label for="guiaRate">Guia dos Quadrinhos: segundos entre requisições</Label>
-					<Input id="guiaRate" type="number" min="1" bind:value={s.metadata.guiaRateSeconds} />
-					{@render field('metadata.guiaRateSeconds')}
+					<Label for="rate">Segundos entre pedidos a cada fonte</Label>
+					<Input id="rate" type="number" min="1" bind:value={s.metadata.rateSeconds} />
+					{@render field('metadata.rateSeconds')}
 				</div>
 				<div class="grid gap-1.5">
-					<Label for="cacheDays">Guardar páginas consultadas por (dias)</Label>
+					<Label for="cacheDays">Guardar respostas consultadas por (dias)</Label>
 					<Input id="cacheDays" type="number" min="1" bind:value={s.metadata.cacheDays} />
 					{@render field('metadata.cacheDays')}
 				</div>
 			</Card.Content>
+			<Card.Footer>
+				<Button type="button" variant="outline" size="sm" disabled={testingKey || !s.metadata.comicVineApiKey} onclick={testKey}>
+					<KeyRoundIcon /> {testingKey ? 'Testando…' : 'Salvar e testar a chave'}
+				</Button>
+			</Card.Footer>
 		</Card.Root>
 
 		<Card.Root>
