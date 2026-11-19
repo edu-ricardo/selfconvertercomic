@@ -88,3 +88,38 @@ func TestPutRejectsInvalid(t *testing.T) {
 		t.Fatal("configuração inválida foi gravada")
 	}
 }
+
+// Configurações salvas até a M8 têm metadata.guiaRateSeconds: o valor passa para rateSeconds, e o GCD
+// (campo novo) vem ligado.
+func TestLegacyGuiaRate(t *testing.T) {
+	st := openStore(t, filepath.Join(t.TempDir(), "qt.db"))
+	ctx := context.Background()
+	if _, err := st.db.Exec(`INSERT INTO settings (id, data) VALUES (1, '{"metadata":{"comicVineApiKey":"k","guiaRateSeconds":7,"cacheDays":30}}')`); err != nil {
+		t.Fatal(err)
+	}
+	got, err := st.Get(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Metadata.RateSeconds != 7 || !got.Metadata.GCDEnabled || got.Metadata.ComicVineAPIKey != "k" {
+		t.Fatalf("metadados migrados: %+v", got.Metadata)
+	}
+	if err := st.Put(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := st.Get(ctx); again.Metadata.RateSeconds != 7 {
+		t.Fatalf("depois de salvar de novo: %+v", again.Metadata)
+	}
+}
+
+func TestPutTrimsAPIKey(t *testing.T) {
+	st := openStore(t, filepath.Join(t.TempDir(), "qt.db"))
+	s := Defaults()
+	s.Metadata.ComicVineAPIKey = " abc123\n"
+	if err := st.Put(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := st.Get(context.Background()); got.Metadata.ComicVineAPIKey != "abc123" {
+		t.Errorf("chave gravada: %q", got.Metadata.ComicVineAPIKey)
+	}
+}

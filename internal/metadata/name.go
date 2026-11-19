@@ -13,7 +13,7 @@ import (
 
 // ParserVersion muda quando o analisador de nomes muda: as edições identificadas por uma versão
 // anterior são reanalisadas na próxima varredura.
-const ParserVersion = 1
+const ParserVersion = 2 // 2: ano de uma pasta acima
 
 // Guess é o que dá para saber de uma edição só pelo caminho.
 type Guess struct {
@@ -170,6 +170,12 @@ func ParseName(relPath string) Guess {
 		g.Series = humanizeFolder(dirs[len(dirs)-1])
 	default:
 		g.Series = words
+	}
+	// Sem ano no nome, vale o de uma pasta acima ("guerras_secretas/2015/.../Inferno/...").
+	for i := len(dirs) - 1; i >= 0 && g.Year == 0; i-- {
+		if isYear(dirs[i]) {
+			g.Year = atoi(dirs[i])
+		}
 	}
 	return g
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
+	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
 	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 	"github.com/edu-ricardo/selfconvertercomic/internal/tasks"
@@ -34,6 +35,7 @@ type Deps struct {
 	Tasks     *tasks.Store
 	Notifier  *notify.Notifier
 	Backups   *backup.Manager
+	Metadata  *metadata.Finder
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.
@@ -49,6 +51,7 @@ func New(d Deps) http.Handler {
 	d.registerCatalog(mux)
 	d.registerTasks(mux)
 	d.registerBackups(mux)
+	d.registerMetadata(mux)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rota não encontrada")
 	})

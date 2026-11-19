@@ -20,7 +20,7 @@ export interface Settings {
 		onTasks: boolean;
 	};
 	readers: { kavitaUrl: string; bookOrbitUrl: string };
-	metadata: { comicVineApiKey: string; guiaRateSeconds: number; cacheDays: number };
+	metadata: { comicVineApiKey: string; gcdEnabled: boolean; rateSeconds: number; cacheDays: number };
 	backup: { daily: boolean; keep: number };
 }
 
@@ -197,6 +197,7 @@ export const api = {
 	retryTask: (id: number) => request<{ queued: boolean }>('POST', `/api/tasks/${id}/retry`),
 	dismissTask: (id: number) => request<{ dismissed: boolean }>('POST', `/api/tasks/${id}/dismiss`),
 	testNotification: () => request<{ sent: boolean }>('POST', '/api/notifications/test'),
+	testComicVine: () => request<{ ok: boolean }>('POST', '/api/metadata/comicvine/test'),
 
 	listSeries: (f: CatalogFilter) => request<Page<Series>>('GET', `/api/catalog/series?${query(f)}`),
 	listFiles: (f: CatalogFilter & { series?: string }) =>

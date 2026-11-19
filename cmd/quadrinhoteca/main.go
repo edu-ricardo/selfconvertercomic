@@ -18,6 +18,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
+	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
 	"github.com/edu-ricardo/selfconvertercomic/internal/notify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/server"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
@@ -101,6 +102,18 @@ func main() {
 		// O catálogo restaurado pode estar desatualizado em relação aos discos: revarre tudo.
 		AfterRestore: func() { scanner.EnqueueAll(ctx) },
 	}
+	// Provedores de metadados: um pedido por vez a cada um, com User-Agent próprio (o ComicVine recusa
+	// os genéricos). Sem dados do usuário no User-Agent.
+	httpClient := &http.Client{Timeout: 20 * time.Second}
+	userAgent := "QuadrinhoTeca/" + version + " (+https://github.com/edu-ricardo/selfconvertercomic)"
+	fetcher := func(provider string) *metadata.Fetcher {
+		return &metadata.Fetcher{Provider: provider, DB: conn, Client: httpClient, UserAgent: userAgent}
+	}
+	finder := &metadata.Finder{
+		ComicVine: &metadata.ComicVine{F: fetcher("ComicVine")},
+		GCD:       &metadata.GCD{F: fetcher("GCD")},
+		Settings:  settingsStore.Get,
+	}
 	go scanner.Run(ctx)
 	go runner.Run(ctx)
 	go backups.Run(ctx)
@@ -121,6 +134,7 @@ func main() {
 			Tasks:     taskStore,
 			Notifier:  notifier,
 			Backups:   backups,
+			Metadata:  finder,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

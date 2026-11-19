@@ -13,7 +13,7 @@ func TestParseName(t *testing.T) {
 		{"Marvel/guerras_secretas/1984/Capítulo 01.pdf", Guess{Series: "Guerras Secretas", Number: "1", Year: 1984}},
 		{"Marvel/guerras_secretas/II/Capítulo 04.cbz", Guess{Series: "Guerras Secretas II", Number: "4"}},
 		{gs + "00 - Prelúdio/Tempo Esgotado/Cópia de Capítulo 37.pdf", Guess{Series: "Tempo Esgotado", Number: "37"}},
-		{gs + "00 - Prelúdio/Tempo Esgotado/Os Novos Vingadores v3 #25 (MK-SQ).pdf", Guess{Series: "Os Novos Vingadores", Volume: "3", Number: "25", Group: "MK-SQ"}},
+		{gs + "00 - Prelúdio/Tempo Esgotado/Os Novos Vingadores v3 #25 (MK-SQ).pdf", Guess{Series: "Os Novos Vingadores", Volume: "3", Number: "25", Group: "MK-SQ", Year: 2015}},
 		{gs + "00 - Prelúdio/Tempo Esgotado/Vingadores Mundiais #17.pdf", Guess{Series: "Vingadores Mundiais", Number: "17"}},
 		{gs + "00 - Prelúdio/Tempo Esgotado/Miles-Morales-Ultimate-Homem-Ara (9).pdf", Guess{Series: "Miles Morales Ultimate Homem Ara", Number: "9"}},
 		{gs + "01 - Últimos Dias/00.pdf", Guess{Series: "Últimos Dias", Number: "0"}},
@@ -58,6 +58,7 @@ func TestParseName(t *testing.T) {
 		{"Marvel/Kitty Pryde/2001/Capítulo 03.pdf", Guess{Series: "Kitty Pryde", Number: "3", Year: 2001}},
 		{"Marvel/Kitty Pryde/Mekanix/Capítulo 02.pdf", Guess{Series: "Mekanix", Number: "2"}},
 		{"Batman 001.cbz", Guess{Series: "Batman", Number: "1"}},
+		{"Marvel/1984/Extras/Batman 001.cbz", Guess{Series: "Batman", Number: "1", Year: 1984}},
 	}
 	for _, c := range cases {
 		got := ParseName(c.path)
