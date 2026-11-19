@@ -2,6 +2,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -40,6 +41,7 @@ type Deps struct {
 	Metadata   *metadata.Finder
 	Identifier *identify.Identifier
 	Organizer  *organize.Organizer
+	DB         *sql.DB // consultas só de leitura (duplicados)
 }
 
 // New devolve o handler raiz: API em /api/ e a interface web (SPA) no resto.
@@ -57,6 +59,7 @@ func New(d Deps) http.Handler {
 	d.registerBackups(mux)
 	d.registerMetadata(mux)
 	d.registerOrganize(mux)
+	d.registerDuplicates(mux)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "rota não encontrada")
 	})

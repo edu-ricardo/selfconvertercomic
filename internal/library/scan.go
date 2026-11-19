@@ -126,6 +126,8 @@ func (s *Store) Scan(ctx context.Context, lib Library) (Result, error) {
 		INSERT INTO files (library_id, rel_path, format, size, mtime, publisher, series, title)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (library_id, rel_path) DO UPDATE SET format = excluded.format, size = excluded.size,
+			content_hash = CASE WHEN files.size = excluded.size AND files.mtime = excluded.mtime
+				THEN files.content_hash ELSE '' END,
 			mtime = excluded.mtime, publisher = excluded.publisher, series = excluded.series,
 			title = excluded.title, changed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`)
 	if err != nil {
