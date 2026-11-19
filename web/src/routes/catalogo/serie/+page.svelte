@@ -12,6 +12,8 @@
 	import { editionLabel, fileStatusLabel, fileStatusVariant } from '$lib/status';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import BookIcon from '@lucide/svelte/icons/book';
+	import SparklesIcon from '@lucide/svelte/icons/sparkles';
+	import { toast } from 'svelte-sonner';
 
 	const PAGE = 60;
 	const filter = $derived(filterFromURL(page.url.searchParams));
@@ -46,6 +48,17 @@
 	);
 	const back = $derived('/catalogo' + filterToQuery({ ...filter, library: undefined }));
 
+	async function identifySeries() {
+		const lib = items?.[0]?.libraryId;
+		if (!lib) return;
+		try {
+			const { queued } = await api.identifySeries(lib, key);
+			toast.success(queued ? `${queued} edição(ões) na fila de identificação` : 'Todas as edições já têm metadados');
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Falha');
+		}
+	}
+
 	function change(f: CatalogFilter) {
 		goto(filterToQuery({ ...f, library: filter.library }, { key }), {
 			replaceState: true,
@@ -58,7 +71,13 @@
 <a href={back} class="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm">
 	<ArrowLeftIcon class="size-4" /> Catálogo
 </a>
-<PageHeader {title} description={subtitle ? `${subtitle} · ${total} arquivo(s)` : undefined} />
+<PageHeader {title} description={subtitle ? `${subtitle} · ${total} arquivo(s)` : undefined}>
+	{#snippet actions()}
+		<Button variant="outline" size="sm" disabled={!items?.length} onclick={identifySeries}>
+			<SparklesIcon /> Identificar série
+		</Button>
+	{/snippet}
+</PageHeader>
 
 <CatalogFilters {filter} onchange={change} showLibrary={false} />
 

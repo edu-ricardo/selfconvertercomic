@@ -117,7 +117,16 @@ func (d Deps) getFile(w http.ResponseWriter, r *http.Request) {
 	if s.Readers.BookOrbitURL != "" {
 		readers["bookOrbit"] = strings.TrimRight(s.Readers.BookOrbitURL, "/")
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"file": f, "path": abs, "readers": readers})
+	var edition any
+	if f.EditionID != 0 {
+		ed, err := d.Identifier.Get(r.Context(), f.EditionID)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		edition = ed
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"file": f, "path": abs, "readers": readers, "edition": edition})
 }
 
 func (d Deps) fileThumb(w http.ResponseWriter, r *http.Request) {

@@ -10,7 +10,10 @@ import (
 )
 
 // Tipos de tarefa.
-const KindConversionError = "conversion_error"
+const (
+	KindConversionError = "conversion_error"
+	KindMetadataConfirm = "metadata_confirm" // rel_path = pasta/nome-base da edição; ref_id = id de um arquivo dela
+)
 
 // Status de uma tarefa.
 const (

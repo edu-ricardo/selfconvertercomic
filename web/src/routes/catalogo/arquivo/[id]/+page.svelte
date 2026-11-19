@@ -2,10 +2,11 @@
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 	import Cover from '$lib/components/cover.svelte';
+	import MetadataCard from '$lib/components/metadata-card.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { api, type CatalogFile } from '$lib/api';
+	import { api, type CatalogFile, type EditionMeta } from '$lib/api';
 	import { editionLabel, fileStatusLabel, fileStatusVariant, formatLabel, megabytes } from '$lib/status';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -16,6 +17,7 @@
 	let file = $state<CatalogFile | null>(null);
 	let path = $state('');
 	let readers = $state<{ kavita?: string; bookOrbit?: string }>({});
+	let edition = $state<EditionMeta | null>(null);
 	let error = $state('');
 
 	async function load(fileId: number) {
@@ -24,6 +26,7 @@
 			file = r.file;
 			path = r.path;
 			readers = r.readers;
+			edition = r.edition;
 			error = '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -96,6 +99,10 @@
 					Configure o endereço do Kavita ou do BookOrbit em <a href="/configuracoes" class="underline">Configurações</a>
 					para abrir os quadrinhos a partir daqui.
 				</p>
+			{/if}
+
+			{#if edition}
+				<MetadataCard fileId={file.id} {edition} onchange={() => load(id)} />
 			{/if}
 
 			<Card.Root>

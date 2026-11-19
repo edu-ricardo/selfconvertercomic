@@ -62,17 +62,17 @@ func (cv *ComicVine) get(ctx context.Context, key, resource string, params url.V
 	body, err := cv.F.Get(ctx, cacheKey, cv.base()+"/"+resource+"/?"+q.Encode(), lim, func(b []byte) error {
 		var r cvResponse
 		if err := json.Unmarshal(b, &r); err != nil {
-			return &ProviderError{"ComicVine", ErrUnavailable, "resposta inválida"}
+			return &ProviderError{Provider: "ComicVine", Kind: ErrUnavailable, Detail: "resposta inválida"}
 		}
 		switch r.StatusCode {
 		case 1:
 			return nil
 		case 100:
-			return &ProviderError{"ComicVine", ErrUnauthorized, ""}
+			return &ProviderError{Provider: "ComicVine", Kind: ErrUnauthorized, Detail: ""}
 		case 107:
-			return &ProviderError{"ComicVine", ErrRateLimited, ""}
+			return &ProviderError{Provider: "ComicVine", Kind: ErrRateLimited, Detail: ""}
 		default:
-			return &ProviderError{"ComicVine", ErrUnavailable, r.Error}
+			return &ProviderError{Provider: "ComicVine", Kind: ErrUnavailable, Detail: r.Error}
 		}
 	})
 	if err != nil {

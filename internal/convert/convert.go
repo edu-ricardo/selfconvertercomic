@@ -263,16 +263,41 @@ func (cv Converter) render(ctx context.Context, src string, page int, pageHeight
 	return os.ReadFile(prefix + ".jpg")
 }
 
-type comicInfo struct {
-	XMLName   xml.Name `xml:"ComicInfo"`
-	XSI       string   `xml:"xmlns:xsi,attr"`
-	XSD       string   `xml:"xmlns:xsd,attr"`
-	Title     string   `xml:"Title,omitempty"`
-	Summary   string   `xml:"Summary,omitempty"`
-	Notes     string   `xml:"Notes,omitempty"`
-	Writer    string   `xml:"Writer,omitempty"`
-	Tags      string   `xml:"Tags,omitempty"`
-	PageCount int      `xml:"PageCount"`
+// ComicInfo é o ComicInfo.xml (esquema 2.0, o que Kavita e BookOrbit leem). Campos vazios ficam de fora.
+type ComicInfo struct {
+	XMLName     xml.Name `xml:"ComicInfo"`
+	XSI         string   `xml:"xmlns:xsi,attr"`
+	XSD         string   `xml:"xmlns:xsd,attr"`
+	Title       string   `xml:"Title,omitempty"`
+	Series      string   `xml:"Series,omitempty"`
+	Number      string   `xml:"Number,omitempty"`
+	Count       int      `xml:"Count,omitempty"`
+	Volume      int      `xml:"Volume,omitempty"`
+	Summary     string   `xml:"Summary,omitempty"`
+	Notes       string   `xml:"Notes,omitempty"`
+	Year        int      `xml:"Year,omitempty"`
+	Month       int      `xml:"Month,omitempty"`
+	Writer      string   `xml:"Writer,omitempty"`
+	Penciller   string   `xml:"Penciller,omitempty"`
+	Inker       string   `xml:"Inker,omitempty"`
+	Colorist    string   `xml:"Colorist,omitempty"`
+	Letterer    string   `xml:"Letterer,omitempty"`
+	CoverArtist string   `xml:"CoverArtist,omitempty"`
+	Publisher   string   `xml:"Publisher,omitempty"`
+	Tags        string   `xml:"Tags,omitempty"`
+	Web         string   `xml:"Web,omitempty"`
+	PageCount   int      `xml:"PageCount"`
+	LanguageISO string   `xml:"LanguageISO,omitempty"`
+}
+
+func encodeComicInfo(w io.Writer, ci ComicInfo) error {
+	ci.XSI, ci.XSD = "http://www.w3.org/2001/XMLSchema-instance", "http://www.w3.org/2001/XMLSchema"
+	if _, err := io.WriteString(w, xml.Header); err != nil {
+		return err
+	}
+	enc := xml.NewEncoder(w)
+	enc.Indent("", "  ")
+	return enc.Encode(ci)
 }
 
 func writeComicInfo(zw *zip.Writer, res Result, pdf *model.Context) error {
@@ -280,22 +305,72 @@ func writeComicInfo(zw *zip.Writer, res Result, pdf *model.Context) error {
 	if err != nil {
 		return err
 	}
-	ci := comicInfo{
-		XSI:       "http://www.w3.org/2001/XMLSchema-instance",
-		XSD:       "http://www.w3.org/2001/XMLSchema",
+	return encodeComicInfo(w, ComicInfo{
 		Title:     res.Title,
 		Summary:   strings.TrimSpace(pdf.Subject),
 		Writer:    strings.TrimSpace(pdf.Author),
 		Tags:      strings.TrimSpace(pdf.Keywords),
 		PageCount: res.Pages,
 		Notes:     "Convertido de PDF pela QuadrinhoTeca.",
-	}
-	if _, err := io.WriteString(w, xml.Header); err != nil {
+	})
+}
+
+// WriteComicInfo troca o ComicInfo.xml de um CBZ existente: as outras entradas são copiadas sem
+// descompactar (páginas idênticas byte a byte), num temporário do mesmo disco renomeado no fim.
+// PageCount é a quantidade de entradas além do ComicInfo.xml.
+func WriteComicInfo(path string, ci ComicInfo) error {
+	zr, err := zip.OpenReader(path)
+	if err != nil {
 		return err
 	}
-	enc := xml.NewEncoder(w)
-	enc.Indent("", "  ")
-	return enc.Encode(ci)
+	defer zr.Close()
+	tmp := TempPath(path)
+	out, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	ok := false
+	defer func() {
+		if !ok {
+			out.Close()
+			os.Remove(tmp)
+		}
+	}()
+	zw := zip.NewWriter(out)
+	ci.PageCount = 0
+	for _, f := range zr.File {
+		if strings.EqualFold(f.Name, "ComicInfo.xml") {
+			continue
+		}
+		if err := zw.Copy(f); err != nil {
+			return fmt.Errorf("%s: %w", f.Name, err)
+		}
+		if !f.FileInfo().IsDir() {
+			ci.PageCount++
+		}
+	}
+	w, err := zw.Create("ComicInfo.xml")
+	if err != nil {
+		return err
+	}
+	if err := encodeComicInfo(w, ci); err != nil {
+		return err
+	}
+	if err := zw.Close(); err != nil {
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	zr.Close()
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	ok = true
+	return nil
 }
 
 // Validate confere que o CBZ abre, tem exatamente pages imagens e que cada uma é JPEG ou PNG.

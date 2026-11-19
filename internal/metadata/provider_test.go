@@ -263,3 +263,37 @@ func TestScoreRealCases(t *testing.T) {
 		}
 	}
 }
+
+// O limite da fonte (429 + Retry-After, como o GCD manda) bloqueia os pedidos seguintes sem chegar
+// a ela até o prazo passar.
+func TestFetcherRetryAfter(t *testing.T) {
+	e := newEnv(t)
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Header().Set("Retry-After", "120")
+		w.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprint(w, `{"detail":"Request was throttled. Expected available in 120 seconds."}`)
+	}))
+	defer srv.Close()
+	now := time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC)
+	f := &Fetcher{Provider: "GCD", DB: e.conn, Client: http.DefaultClient, UserAgent: "t", Now: func() time.Time { return now }}
+	ctx := context.Background()
+	_, err := f.Get(ctx, "a", srv.URL, Limits{TTL: time.Hour}, nil)
+	if !errors.Is(err, ErrRateLimited) || RetryAfter(err) != 120*time.Second {
+		t.Fatalf("primeiro pedido: %v (espera %v)", err, RetryAfter(err))
+	}
+	now = now.Add(time.Minute)
+	_, err = f.Get(ctx, "b", srv.URL, Limits{TTL: time.Hour}, nil)
+	if !errors.Is(err, ErrRateLimited) || RetryAfter(err) != time.Minute || hits.Load() != 1 {
+		t.Errorf("durante o bloqueio: %v (espera %v), pedidos %d", err, RetryAfter(err), hits.Load())
+	}
+	now = now.Add(2 * time.Minute)
+	f.Get(ctx, "c", srv.URL, Limits{TTL: time.Hour}, nil)
+	if hits.Load() != 2 {
+		t.Errorf("depois do prazo deveria tentar de novo: %d pedidos", hits.Load())
+	}
+	if retryAfter("") != defaultBlock || retryAfter("abc") != defaultBlock || retryAfter("30") != 30*time.Second {
+		t.Error("leitura do Retry-After")
+	}
+}

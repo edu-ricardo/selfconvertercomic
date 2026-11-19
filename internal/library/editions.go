@@ -60,7 +60,8 @@ func syncEditions(ctx context.Context, tx *sql.Tx, libID int64) error {
 		return err
 	}
 
-	insert, err := tx.PrepareContext(ctx, `INSERT INTO editions (library_id, dir, stem, parser_version) VALUES (?, ?, ?, 0)`)
+	insert, err := tx.PrepareContext(ctx, `INSERT INTO editions (library_id, dir, stem, parser_version, meta_status)
+		VALUES (?, ?, ?, 0, 'new')`)
 	if err != nil {
 		return err
 	}
@@ -70,6 +71,13 @@ func syncEditions(ctx context.Context, tx *sql.Tx, libID int64) error {
 		return err
 	}
 	defer setFile.Close()
+	// CBZ novo (ex.: acabou de ser convertido) numa edição com metadados aplicados: falta gravar o
+	// ComicInfo.xml nele.
+	rewrite, err := tx.PrepareContext(ctx, `UPDATE editions SET meta_status = 'rewrite' WHERE id = ? AND meta_status = 'applied'`)
+	if err != nil {
+		return err
+	}
+	defer rewrite.Close()
 	for _, l := range links {
 		e := byKey[l.key]
 		if e == nil {
@@ -85,6 +93,11 @@ func syncEditions(ctx context.Context, tx *sql.Tx, libID int64) error {
 		if e.id != l.editionID {
 			if _, err := setFile.ExecContext(ctx, e.id, l.fileID); err != nil {
 				return err
+			}
+			if strings.EqualFold(path.Ext(l.rel), ".cbz") {
+				if _, err := rewrite.ExecContext(ctx, e.id); err != nil {
+					return err
+				}
 			}
 		}
 	}

@@ -48,7 +48,11 @@ type Finder struct {
 type Result struct {
 	Candidates []Candidate `json:"candidates"`
 	Errors     []string    `json:"errors"`
+	Errs       []error     `json:"-"` // as mesmas falhas, para errors.Is
 }
+
+// AutoApplyScore é a nota a partir da qual os metadados são aplicados sem perguntar (RF-53).
+const AutoApplyScore = 85
 
 // ErrNoProvider: nenhum provedor ligado (sem chave do ComicVine e GCD desligado).
 var ErrNoProvider = errors.New("nenhuma fonte de metadados ligada: informe a chave do ComicVine ou ligue o GCD nas configurações")
@@ -76,6 +80,7 @@ func (f *Finder) Search(ctx context.Context, g Guess) (Result, error) {
 				return ctx.Err()
 			}
 			res.Errors = append(res.Errors, err.Error())
+			res.Errs = append(res.Errs, err)
 		}
 		return nil
 	}
@@ -100,7 +105,7 @@ func (f *Finder) TestComicVine(ctx context.Context) error {
 		return err
 	}
 	if s.Metadata.ComicVineAPIKey == "" {
-		return &ProviderError{"ComicVine", ErrUnauthorized, "nenhuma chave informada"}
+		return &ProviderError{Provider: "ComicVine", Kind: ErrUnauthorized, Detail: "nenhuma chave informada"}
 	}
 	return f.ComicVine.Test(ctx, s.Metadata.ComicVineAPIKey, limits(s.Metadata))
 }

@@ -50,6 +50,7 @@ type Readers struct {
 }
 
 type Metadata struct {
+	AutoIdentify    bool   `json:"autoIdentify"` // procura metadados das edições novas sozinho
 	ComicVineAPIKey string `json:"comicVineApiKey"`
 	GCDEnabled      bool   `json:"gcdEnabled"`  // API do GCD (sem chave)
 	RateSeconds     int    `json:"rateSeconds"` // intervalo entre pedidos a cada provedor
@@ -74,7 +75,7 @@ func Defaults() Settings {
 		},
 		Scan:          Scan{RescanHours: 6},
 		Notifications: Notifications{OnError: true},
-		Metadata:      Metadata{GCDEnabled: true, RateSeconds: 2, CacheDays: 30},
+		Metadata:      Metadata{AutoIdentify: true, GCDEnabled: true, RateSeconds: 2, CacheDays: 30},
 		Backup:        Backup{Daily: true, Keep: 7},
 	}
 }

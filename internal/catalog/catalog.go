@@ -212,17 +212,19 @@ type File struct {
 	Year           int    `json:"year"`
 	Title          string `json:"title"`
 	Status         string `json:"status"`
+	EditionID      int64  `json:"editionId"`  // 0 = ainda sem edição
+	MetaStatus     string `json:"metaStatus"` // ver identify.Status*
 }
 
 const fileColumns = `f.id, f.library_id, l.name, f.rel_path, f.format, f.size, f.mtime, f.publisher, f.series, f.title, ` +
 	seriesKey + `, coalesce(e.series, ''), coalesce(e.volume, ''), coalesce(e.number, ''),
-	coalesce(e.number_inferred, 0), coalesce(e.year, 0), ` + statusExpr
+	coalesce(e.number_inferred, 0), coalesce(e.year, 0), ` + statusExpr + `, coalesce(e.id, 0), coalesce(e.meta_status, '')`
 
 func scanFile(row interface{ Scan(...any) error }, extra ...any) (File, error) {
 	var x File
 	var folder string
 	dest := []any{&x.ID, &x.LibraryID, &x.LibraryName, &x.RelPath, &x.Format, &x.Size, &x.Mtime, &x.Publisher, &folder,
-		&x.Title, &x.Series, &x.SeriesName, &x.Volume, &x.Number, &x.NumberInferred, &x.Year, &x.Status}
+		&x.Title, &x.Series, &x.SeriesName, &x.Volume, &x.Number, &x.NumberInferred, &x.Year, &x.Status, &x.EditionID, &x.MetaStatus}
 	err := row.Scan(append(dest, extra...)...)
 	if x.SeriesName == "" {
 		x.SeriesName = seriesName(folder, x.Publisher, x.LibraryName)

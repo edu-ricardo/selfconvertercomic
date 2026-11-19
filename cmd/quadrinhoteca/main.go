@@ -16,6 +16,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/identify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
 	"github.com/edu-ricardo/selfconvertercomic/internal/metadata"
@@ -104,7 +105,8 @@ func main() {
 	}
 	// Provedores de metadados: um pedido por vez a cada um, com User-Agent próprio (o ComicVine recusa
 	// os genéricos). Sem dados do usuário no User-Agent.
-	httpClient := &http.Client{Timeout: 20 * time.Second}
+	// O GCD chega a levar mais de 15 s por resposta.
+	httpClient := &http.Client{Timeout: 60 * time.Second}
 	userAgent := "QuadrinhoTeca/" + version + " (+https://github.com/edu-ricardo/selfconvertercomic)"
 	fetcher := func(provider string) *metadata.Fetcher {
 		return &metadata.Fetcher{Provider: provider, DB: conn, Client: httpClient, UserAgent: userAgent}
@@ -114,6 +116,14 @@ func main() {
 		GCD:       &metadata.GCD{F: fetcher("GCD")},
 		Settings:  settingsStore.Get,
 	}
+	identifier := &identify.Identifier{DB: conn, Finder: finder, Tasks: taskStore, Settings: settingsStore.Get}
+	// Varredura nova → pode haver edições novas para identificar (ou CBZ novos para regravar).
+	onScan := scanner.OnScan
+	scanner.OnScan = func(l library.Library, r library.Result) {
+		onScan(l, r)
+		identifier.Notify()
+	}
+	go identifier.Run(ctx)
 	go scanner.Run(ctx)
 	go runner.Run(ctx)
 	go backups.Run(ctx)
@@ -121,20 +131,21 @@ func main() {
 	srv := &http.Server{
 		Addr: addr,
 		Handler: server.New(server.Deps{
-			Version:   version,
-			UI:        web.Files(),
-			Settings:  settingsStore,
-			Libraries: libraries,
-			Roots:     roots,
-			Scanner:   scanner,
-			Jobs:      jobStore,
-			Runner:    runner,
-			Catalog:   catalog.NewStore(conn),
-			Thumbs:    &catalog.Thumbnailer{Dir: filepath.Join(dataDir, "cache", "thumbs")},
-			Tasks:     taskStore,
-			Notifier:  notifier,
-			Backups:   backups,
-			Metadata:  finder,
+			Version:    version,
+			UI:         web.Files(),
+			Settings:   settingsStore,
+			Libraries:  libraries,
+			Roots:      roots,
+			Scanner:    scanner,
+			Jobs:       jobStore,
+			Runner:     runner,
+			Catalog:    catalog.NewStore(conn),
+			Thumbs:     &catalog.Thumbnailer{Dir: filepath.Join(dataDir, "cache", "thumbs")},
+			Tasks:      taskStore,
+			Notifier:   notifier,
+			Backups:    backups,
+			Metadata:   finder,
+			Identifier: identifier,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

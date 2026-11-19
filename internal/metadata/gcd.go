@@ -51,7 +51,7 @@ func (g *GCD) base() string {
 func (g *GCD) get(ctx context.Context, path string, lim Limits, v any) error {
 	body, err := g.F.Get(ctx, path, g.base()+path, lim, func(b []byte) error {
 		if !json.Valid(b) {
-			return &ProviderError{"GCD", ErrUnavailable, "resposta inválida"}
+			return &ProviderError{Provider: "GCD", Kind: ErrUnavailable, Detail: "resposta inválida"}
 		}
 		return nil
 	})

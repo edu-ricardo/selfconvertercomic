@@ -20,7 +20,13 @@ export interface Settings {
 		onTasks: boolean;
 	};
 	readers: { kavitaUrl: string; bookOrbitUrl: string };
-	metadata: { comicVineApiKey: string; gcdEnabled: boolean; rateSeconds: number; cacheDays: number };
+	metadata: {
+		autoIdentify: boolean;
+		comicVineApiKey: string;
+		gcdEnabled: boolean;
+		rateSeconds: number;
+		cacheDays: number;
+	};
 	backup: { daily: boolean; keep: number };
 }
 
@@ -134,6 +140,59 @@ export interface CatalogFile {
 	year: number;
 	title: string;
 	status: FileStatus;
+	editionId: number; // 0 = ainda sem edição
+	metaStatus: MetaStatus;
+}
+
+export type MetaStatus = '' | 'new' | 'queued' | 'applied' | 'rewrite' | 'task' | 'error';
+
+export interface Candidate {
+	provider: 'gcd' | 'comicvine';
+	issueId: string;
+	seriesId: string;
+	series: string;
+	number: string;
+	title: string;
+	year: number;
+	publisher: string;
+	language: string;
+	issueCount: number;
+	coverUrl: string;
+	url: string;
+	score: number;
+}
+
+export interface MetadataDetails {
+	provider: 'gcd' | 'comicvine';
+	issueId: string;
+	url: string;
+	series: string;
+	number: string;
+	title: string;
+	year: number;
+	month: number;
+	publisher: string;
+	language: string;
+	writers: string[] | null;
+	pencillers: string[] | null;
+	inkers: string[] | null;
+	colorists: string[] | null;
+	letterers: string[] | null;
+	coverArtists: string[] | null;
+	summary: string;
+	coverUrl: string;
+}
+
+export interface EditionMeta {
+	id: number;
+	libraryId: number;
+	key: string;
+	guess: { series: string; volume: string; number: string; year: number };
+	status: MetaStatus;
+	error: string;
+	score: number;
+	applied: MetadataDetails | null;
+	candidates: Candidate[];
 }
 
 export interface Page<T> {
@@ -205,9 +264,25 @@ export const api = {
 	publishers: (library?: number) =>
 		request<string[]>('GET', `/api/catalog/publishers${library ? `?library=${library}` : ''}`),
 	getFile: (id: number) =>
-		request<{ file: CatalogFile; path: string; readers: { kavita?: string; bookOrbit?: string } }>(
+		request<{
+			file: CatalogFile;
+			path: string;
+			readers: { kavita?: string; bookOrbit?: string };
+			edition: EditionMeta | null;
+		}>('GET', `/api/files/${id}`),
+	identifyFile: (id: number) => request<{ queued: boolean }>('POST', `/api/files/${id}/identify`),
+	fileCandidates: (id: number, q: { series: string; number: string; year: string }) =>
+		request<{ candidates: Candidate[]; errors: string[] }>(
 			'GET',
-			`/api/files/${id}`
+			`/api/files/${id}/candidates?${new URLSearchParams(q)}`
+		),
+	applyMetadata: (id: number, c: { provider: string; issueId: string; score: number }) =>
+		request<EditionMeta>('POST', `/api/files/${id}/metadata`, c),
+	identifyLibrary: (id: number) => request<{ queued: number }>('POST', `/api/libraries/${id}/identify`),
+	identifySeries: (library: number, series: string) =>
+		request<{ queued: number }>(
+			'POST',
+			`/api/catalog/series/identify?${new URLSearchParams({ library: String(library), series })}`
 		),
 	convertFile: (id: number) => request<{ queued: boolean }>('POST', `/api/files/${id}/convert`),
 
