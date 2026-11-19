@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -12,10 +11,10 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
+	"github.com/edu-ricardo/selfconvertercomic/internal/fsutil"
 	"github.com/edu-ricardo/selfconvertercomic/internal/settings"
 )
 
@@ -378,7 +377,7 @@ func (r *Runner) handleOriginal(ctx context.Context, src, libName, relPath strin
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
-		return moveFile(src, dst)
+		return fsutil.Move(src, dst)
 	default: // keep
 		return nil
 	}
@@ -395,42 +394,4 @@ func safeName(s string) string {
 		return "biblioteca"
 	}
 	return s
-}
-
-// moveFile renomeia; entre discos diferentes, copia, confere o tamanho e só então apaga a origem.
-func moveFile(src, dst string) error {
-	err := os.Rename(src, dst)
-	if err == nil || !errors.Is(err, syscall.EXDEV) {
-		return err
-	}
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	tmp := filepath.Join(filepath.Dir(dst), "."+filepath.Base(dst)+".qt-tmp")
-	out, err := os.Create(tmp)
-	if err != nil {
-		return err
-	}
-	n, err := io.Copy(out, in)
-	if err == nil {
-		err = out.Sync()
-	}
-	if cerr := out.Close(); err == nil {
-		err = cerr
-	}
-	fi, serr := in.Stat()
-	if err == nil && serr == nil && n != fi.Size() {
-		err = fmt.Errorf("cópia incompleta (%d de %d bytes)", n, fi.Size())
-	}
-	if err == nil {
-		err = os.Rename(tmp, dst)
-	}
-	if err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	in.Close()
-	return os.Remove(src)
 }

@@ -10,6 +10,7 @@
 	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
+	import FolderTreeIcon from '@lucide/svelte/icons/folder-tree';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import XIcon from '@lucide/svelte/icons/x';
@@ -21,6 +22,7 @@
 	const nav = [
 		{ href: '/catalogo', label: 'Catálogo', icon: LibraryIcon },
 		{ href: '/bibliotecas', label: 'Bibliotecas', icon: FolderOpenIcon },
+		{ href: '/organizar', label: 'Organizar', icon: FolderTreeIcon },
 		{ href: '/tarefas', label: 'Tarefas', icon: ListChecksIcon },
 		{ href: '/fila', label: 'Fila', icon: ListOrderedIcon },
 		{ href: '/configuracoes', label: 'Configurações', icon: SettingsIcon }

@@ -27,6 +27,7 @@ export interface Settings {
 		rateSeconds: number;
 		cacheDays: number;
 	};
+	organize: { template: string };
 	backup: { daily: boolean; keep: number };
 }
 
@@ -228,6 +229,33 @@ export interface Task {
 	resolvedAt: string | null;
 }
 
+export interface OrganizeItem {
+	editionId: number;
+	from: string;
+	to: string;
+	source: 'fontes' | 'nome';
+	problem: string;
+	files: { fileId: number; from: string; to: string }[];
+}
+
+export interface OrganizePlan {
+	template: string;
+	items: OrganizeItem[];
+	unchanged: number;
+}
+
+export interface OrganizeOp {
+	id: number;
+	libraryId: number;
+	template: string;
+	status: 'done' | 'partial' | 'undone' | 'running';
+	error: string;
+	moves: number;
+	editions: number;
+	createdAt: string;
+	undoneAt: string | null;
+}
+
 export interface BackupInfo {
 	name: string;
 	size: number;
@@ -246,6 +274,16 @@ async function restoreBackup(file: File) {
 }
 
 export const api = {
+	organizePlan: (library: number, template: string, series = '') =>
+		request<OrganizePlan>(
+			'GET',
+			`/api/libraries/${library}/organize?${new URLSearchParams({ template, series })}`
+		),
+	organizeApply: (library: number, template: string, editions: number[]) =>
+		request<OrganizeOp>('POST', `/api/libraries/${library}/organize`, { template, editions }),
+	organizeHistory: (library: number) => request<OrganizeOp[]>('GET', `/api/libraries/${library}/organize/history`),
+	organizeUndo: (op: number) => request<OrganizeOp>('POST', `/api/organize/${op}/undo`),
+
 	listBackups: () => request<BackupInfo[]>('GET', '/api/backups'),
 	createBackup: () => request<BackupInfo>('POST', '/api/backups'),
 	restoreBackup,
