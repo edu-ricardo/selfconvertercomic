@@ -74,7 +74,7 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
   recusada; agora é aparada ao salvar. **Sem** o vínculo com a edição original: nenhuma das duas APIs o
   expõe direto (o GCD não liga a edição BR à original pela API).
 
-### M10 — Aplicar metadados e confirmar
+### M10 — Aplicar metadados e confirmar ✅
 - Identificação em segundo plano (fila própria, retomável), automática para edições novas e manual
   ("identificar série", "identificar biblioteca").
 - Confiança alta → aplica; senão abre tarefa "confirmar metadados" com até 5 candidatos (capa, série,
@@ -85,6 +85,31 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
 - **Verificar:** as 12 edições de `Marvel/guerras_secretas/1984` identificadas como *Secret Wars* (1984)
   #1–12 com roteiro e desenho; `ComicInfo.xml` regravado e válido (páginas intactas, mesmo hash); caso
   ambíguo vira tarefa e "confirmar" aplica.
+- **Resultado (2026-11-19):** `internal/identify`: fila no próprio banco (`editions.meta_status`, migração
+  0008), uma edição por vez; edições **novas** entram sozinhas (`metadata.autoIdentify`, ligado), as que
+  já existiam só com "Identificar metadados" (biblioteca), "Identificar série" ou "Identificar" (edição) —
+  evita disparar centenas de pedidos ao atualizar. Nota ≥ 85 e nenhum outro candidato diferente também
+  ≥ 85 → aplica; senão tarefa "Confirmar metadados" com até 5 candidatos e busca manual (série, número,
+  ano) na página do quadrinho. Detalhes completos por fonte (GCD: créditos de cada história, sinopse,
+  data, idioma da série; ComicVine: `person_credits`, descrição, editora do volume) gravados no
+  `ComicInfo.xml` de **cada CBZ da edição** (`convert.WriteComicInfo`: páginas copiadas sem descompactar,
+  temporário + `rename`); PDF/CBR só no banco; CBZ que aparece depois (conversão) recebe os metadados sem
+  novo pedido (`rewrite`). Catálogo continua agrupando pela série do nome (estável) e o detalhe mostra os
+  metadados; **desvio do plano:** a série/editora das fontes não substituem as do catálogo, porque a fonte
+  devolve nomes como "Secret Wars (Guerras Secretas)" e a organização (M11) é quem decide o nome final.
+  **Teste real (GCD):** as 12 edições de `Marvel/guerras_secretas/1984` identificadas sozinhas como a
+  edição da Abril (*Secret Wars (Guerras Secretas)* #1–12, 1986), com título de cada história ("A Guerra
+  Se Inicia", "Prisioneiros de Guerra"…), roteiro, desenho, arte-final, capa, editora, data e link;
+  `ComicInfo.xml` regravado com as 40 páginas **idênticas byte a byte**. *Vingadores Mundiais* #21 e
+  *Os Novos Vingadores* #25 sem correspondência viraram tarefa; buscar "Avengers World" #21 (2015) na
+  página do quadrinho e "Usar este" aplicou e fechou a tarefa (créditos vazios: o GCD só cataloga a capa
+  dessa edição). **Achados no teste real:** (1) o GCD sem login aceita **pouquíssimos pedidos** — bloqueia
+  com HTTP 429 e `Retry-After` de ~15 min depois de alguns pedidos, e chegou a demorar 17 s por resposta;
+  a app agora respeita o `Retry-After`, recusa na hora pedidos à fonte bloqueada (inclusive a busca
+  manual), pausa sem ser interrompida por varreduras novas, trata lentidão/queda como passageira (a edição
+  fica na fila em vez de virar erro) e usa tempo-limite de 60 s (era 20 s). Consequência: **identificar a
+  biblioteca inteira só pelo GCD leva horas** (em segundo plano); com a chave do ComicVine é bem mais
+  rápido. (2) Erros de identificação não iam para o log; agora vão.
 
 ### M11 — Organização (plano, aplicar, desfazer)
 - Template configurável (`{editora}/{serie} ({ano})/{serie} ({ano}) #{numero}`), com prévia ao digitar.
