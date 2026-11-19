@@ -75,16 +75,16 @@ func TestSeriesFiltersAndStatus(t *testing.T) {
 	for _, s := range all.Items {
 		byKey[s.Key] = s
 	}
-	gs := byKey["Marvel/guerras_secretas/1984"]
-	if gs.Name != "guerras_secretas / 1984" || gs.Publisher != "Marvel" || gs.Count != 5 || gs.Formats["pdf"] != 4 {
+	gs := byKey["guerrassecretas"]
+	if gs.Name != "Guerras Secretas" || gs.Publisher != "Marvel" || gs.Count != 5 || gs.Formats["pdf"] != 4 {
 		t.Errorf("série Guerras Secretas: %+v", gs)
 	}
 	cover, _, _ := fx.cat.Get(ctx, gs.CoverFileID)
 	if cover.Format != "cbz" {
 		t.Errorf("capa deveria preferir o CBZ, veio %s", cover.RelPath)
 	}
-	if byKey[""].Name != "HD" || byKey["Marvel"].Name != "Marvel" {
-		t.Errorf("nomes: raiz=%q marvel=%q", byKey[""].Name, byKey["Marvel"].Name)
+	if byKey["solto"].Name != "solto" || byKey["guerracivil"].Name != "Guerra Civil" || byKey["batman"].Name != "Batman" {
+		t.Errorf("nomes: %+v", byKey)
 	}
 
 	status := map[string]string{}
@@ -123,10 +123,17 @@ func TestSeriesFiltersAndStatus(t *testing.T) {
 		}
 	}
 
-	key := "Marvel/guerras_secretas/1984"
+	key := "guerrassecretas"
 	p, _ := fx.cat.ListFiles(ctx, Filter{LibraryID: fx.lib.ID, Limit: 2}, &key)
-	if p.Total != 5 || len(p.Items) != 2 || p.Items[0].Title != "Capítulo 01" {
+	if p.Total != 5 || len(p.Items) != 2 || p.Items[0].Title != "Capítulo 01" || p.Items[0].Number != "1" ||
+		p.Items[0].Year != 1984 || p.Items[0].SeriesName != "Guerras Secretas" {
 		t.Errorf("arquivos da série paginados: %+v", p)
+	}
+
+	// A busca também olha a série identificada (que pode não aparecer no nome nem na pasta).
+	fx.conn.Exec("UPDATE editions SET series = 'Zebra Galáctica' WHERE stem = 'Batman Vol. 1'")
+	if p, _ := fx.cat.ListFiles(ctx, Filter{Query: "zebra galactica", Limit: 10}, nil); p.Total != 1 {
+		t.Errorf("busca pela série identificada: %+v", p)
 	}
 	pubs, _ := fx.cat.Publishers(ctx, 0)
 	if fmt.Sprint(pubs) != "[DC Comics Marvel]" {

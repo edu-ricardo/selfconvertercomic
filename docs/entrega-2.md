@@ -23,7 +23,7 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
 
 ## Marcos
 
-### M8 — Identificação local
+### M8 — Identificação local ✅
 - Tabela `editions` (biblioteca, pasta, nome-base, série, volume, número, ano, título, grupo, fonte,
   confiança, status) ligada aos arquivos; preenchida na varredura.
 - Analisador de nomes para os padrões vistos no acervo (`NNN-Serie-vN-NNN`, `Serie vN #NN (GRUPO)`,
@@ -32,6 +32,22 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
 - Catálogo passa a agrupar por série identificada (com a pasta como reserva) e mostra o número da edição.
 - **Verificar:** tabela de casos com ~40 nomes reais do acervo (série, volume, número esperados) passa
   100%; rodando na biblioteca real (via backup do banco do Umbrel) ≥ 90% das edições com série + número.
+- **Resultado (2026-11-19):** tabela `editions` (uma por pasta + nome-base, então PDF e CBZ da mesma
+  edição compartilham o registro) preenchida na varredura, com reanálise automática quando o analisador
+  muda (`ParserVersion`) e limpeza das edições sem arquivos. Analisador em `internal/metadata`: marcadores
+  `vN`, `#N`, `Vol. N`, `Capítulo N`, `NN de NN`, ano, grupo (`(MK-SQ)`, `-SQ`), prefixo de ordem
+  (`034-`), autores antes de ` - `; usa o **nome da pasta** quando ele corresponde ao do arquivo (recupera
+  acentos e nomes cortados: `Capit-Marvel-e-a-Tropa-da-Ca` → "Capitã Marvel & A Tropa da Carol"); série
+  pela pasta para `Capítulo NN` (pasta-ano vira ano: `guerras_secretas/1984` → "Guerras Secretas", 1984).
+  Os nomes com hífens do acervo são **cortados em 32 caracteres** e muitos perdem o número; ele é
+  **deduzido pela ordem de leitura** quando todas as edições da série têm o prefixo e os números
+  conhecidos batem com a posição (marcado como "deduzido" na UI). O `Title` interno do PDF ficou de fora:
+  no acervo ele é genérico ("Guerras Secretas") e lê-lo custaria abrir cada PDF na varredura.
+  Casos de teste com 48 nomes reais: 100%. Acervo real (295 edições, lista fora do repositório,
+  `QT_ACERVO`): **294 com série e número (99,7%)**, 91 números deduzidos pela ordem, 70 séries; a que
+  falta é a edição única `Mark Millar - Guerra Civil (2022)`. Catálogo agrupa por série identificada,
+  ordena por número e busca também pela série; 10 mil arquivos: séries em 29–65 ms (a 1ª versão levou 3 s
+  na última página — capa calculada para todas as séries; corrigido calculando só para as da página).
 
 ### M9 — Provedores ComicVine e GCD
 - Clientes com ritmo, cache, tempo-limite e erros claros (chave inválida, limite atingido, serviço fora).

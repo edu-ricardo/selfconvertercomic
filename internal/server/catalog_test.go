@@ -44,7 +44,7 @@ func TestCatalogAPI(t *testing.T) {
 	}
 
 	var files catalog.Page[catalog.File]
-	json.Unmarshal(get(t, h, "/api/catalog/files?library="+jsonID(lib.ID)+"&series=Marvel/1984").Body.Bytes(), &files)
+	json.Unmarshal(get(t, h, "/api/catalog/files?library="+jsonID(lib.ID)+"&series=marvel").Body.Bytes(), &files)
 	if files.Total != 2 || files.Items[0].Status != catalog.StatusPending {
 		t.Fatalf("arquivos da série: %+v", files)
 	}

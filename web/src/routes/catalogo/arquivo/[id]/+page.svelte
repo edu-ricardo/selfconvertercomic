@@ -6,7 +6,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { api, type CatalogFile } from '$lib/api';
-	import { fileStatusLabel, fileStatusVariant, formatLabel, megabytes } from '$lib/status';
+	import { editionLabel, fileStatusLabel, fileStatusVariant, formatLabel, megabytes } from '$lib/status';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import FileArchiveIcon from '@lucide/svelte/icons/file-archive';
@@ -101,6 +101,16 @@
 			<Card.Root>
 				<Card.Content class="grid gap-2 text-sm">
 					<div class="grid grid-cols-[7rem_1fr] gap-2">
+						<span class="text-muted-foreground">Série</span><span>{file.seriesName}</span>
+						{#if editionLabel(file) || file.year}
+							<span class="text-muted-foreground">Edição</span>
+							<span>
+								{[editionLabel(file), file.year || ''].filter(Boolean).join(' · ')}
+								{#if file.numberInferred}
+									<span class="text-muted-foreground">(número deduzido pela ordem de leitura)</span>
+								{/if}
+							</span>
+						{/if}
 						<span class="text-muted-foreground">Biblioteca</span><span>{file.libraryName}</span>
 						<span class="text-muted-foreground">Tamanho</span><span>{megabytes(file.size)}</span>
 						<span class="text-muted-foreground">Modificado</span><span>{modified}</span>

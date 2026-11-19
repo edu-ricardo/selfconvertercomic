@@ -126,8 +126,12 @@ export interface CatalogFile {
 	size: number;
 	mtime: number;
 	publisher: string;
-	series: string;
+	series: string; // chave da série (a mesma de Series.key)
 	seriesName: string;
+	volume: string;
+	number: string; // "" = desconhecido
+	numberInferred: boolean; // deduzido pela ordem de leitura
+	year: number;
 	title: string;
 	status: FileStatus;
 }
