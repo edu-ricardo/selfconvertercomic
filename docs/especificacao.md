@@ -55,7 +55,7 @@ Consolidação das rodadas 1–7 de [requisitos.md](requisitos.md) (2026-11-18).
 | Id | Requisito | Entrega |
 |---|---|---|
 | RF-50 | Identificar a edição usando metadados internos do PDF (Info/XMP), nome do arquivo e pastas | E2 (leitura dos metadados internos já na E1) |
-| RF-51 | Provedores: **Guia dos Quadrinhos** (scraping, com limite de requisições) e **ComicVine** (API, chave nas configurações) como plano B / edição original | E2 |
+| RF-51 | Provedores: **ComicVine** (API, chave nas configurações) para a edição original e **API do GCD** (sem chave) para a edição brasileira quando existir. O Guia dos Quadrinhos saiu do escopo (bloqueio anti-robô; rodada 8) | E2 |
 | RF-52 | Campos: série, número, título, ano, editora BR, roteiristas, desenhistas, sinopse, capa, vínculo com a edição original | E2 |
 | RF-53 | Aplicar automaticamente quando a confiança for alta; senão criar tarefa de confirmação | E2 |
 | RF-54 | Gravar em `ComicInfo.xml` dentro do CBZ (CBR/PDF: só no banco, já que CBR não é reempacotado) | E2 |
@@ -98,7 +98,7 @@ internal/jobs            → fila persistente em SQLite + pool de workers (norma
 internal/convert         → PDF → CBZ (extração de imagens, fallback de renderização, ComicInfo)
 internal/catalog         → modelo, consultas, miniaturas
 internal/organize   (E2) → templates, planos, aplicar/desfazer, duplicados
-internal/metadata   (E2) → provedores (PDF interno, Guia dos Quadrinhos, ComicVine), pontuação
+internal/metadata   (E2) → provedores (PDF interno, nome/pastas, ComicVine, GCD), pontuação
 internal/tasks           → tarefas pendentes
 internal/notify          → ntfy
 internal/backup          → exportar/restaurar (SQLite `VACUUM INTO` + configurações)
@@ -113,6 +113,7 @@ Banco: SQLite em modo WAL (FTS5 para busca).
    fallback de renderização (exercitado no M3). Teste em [stack.md](stack.md#teste-do-pdfcpu-2026-11-18).
 2. ~~Design system~~ — **decidido:** shadcn-svelte (sobre Tailwind), tema claro/escuro.
 3. ~~Limite do Guia dos Quadrinhos~~ — **decidido:** 1 requisição a cada 2 s, cache local das páginas por 30 dias.
+   **Revisto na rodada 8:** o Guia saiu do escopo; o mesmo limite e o cache valem para ComicVine e GCD.
 4. ~~Padrões iniciais~~ — **decidido:** estabilidade 2 min, revarredura a cada 6 h, backup diário com 7 cópias
    em `${APP_DATA_DIR}/data/backups` (todos ajustáveis na UI).
 5. ~~Repositório~~ — **decidido:** código **público** no GitHub; imagem pública no GHCR.
