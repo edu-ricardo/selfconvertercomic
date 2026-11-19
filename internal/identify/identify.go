@@ -313,6 +313,43 @@ func (i *Identifier) Apply(ctx context.Context, id int64, provider, issueID stri
 	return i.write(ctx, e, d, score)
 }
 
+// ManualScore é a nota de metadados escolhidos ou preenchidos pelo usuário.
+const ManualScore = 100
+
+// ApplyManual grava metadados preenchidos à mão (fonte "manual"): limpa espaços e nomes vazios nas
+// listas e exige a série.
+func (i *Identifier) ApplyManual(ctx context.Context, id int64, d metadata.Details) error {
+	e, err := i.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	d.Provider, d.IssueID, d.URL, d.CoverURL = "manual", "", "", ""
+	d.Series, d.Number, d.Title = strings.TrimSpace(d.Series), strings.TrimLeft(strings.TrimSpace(d.Number), "#"), strings.TrimSpace(d.Title)
+	d.Publisher, d.Language, d.Summary = strings.TrimSpace(d.Publisher), strings.TrimSpace(d.Language), strings.TrimSpace(d.Summary)
+	for _, l := range []*[]string{&d.Writers, &d.Pencillers, &d.Inkers, &d.Colorists, &d.Letterers, &d.CoverArtists} {
+		var clean []string
+		for _, n := range *l {
+			if n = strings.TrimSpace(n); n != "" {
+				clean = append(clean, n)
+			}
+		}
+		*l = clean
+	}
+	if d.Series == "" {
+		return ErrManualSeries
+	}
+	if d.Month < 0 || d.Month > 12 || d.Year < 0 || d.Year > 9999 {
+		return ErrManualDate
+	}
+	return i.write(ctx, e, d, ManualScore)
+}
+
+// Erros dos metadados manuais.
+var (
+	ErrManualSeries = errors.New("informe a série")
+	ErrManualDate   = errors.New("data inválida (mês de 1 a 12)")
+)
+
 // write grava o ComicInfo.xml em cada CBZ da edição e marca os metadados como aplicados.
 func (i *Identifier) write(ctx context.Context, e Edition, d metadata.Details, score int) error {
 	rows, err := i.DB.QueryContext(ctx, `SELECT l.path, f.rel_path FROM files f JOIN libraries l ON l.id = f.library_id
@@ -363,16 +400,21 @@ func (i *Identifier) fileID(ctx context.Context, editionID int64) (int64, error)
 // comicInfo monta o ComicInfo.xml a partir dos detalhes da fonte.
 func comicInfo(g metadata.Guess, d metadata.Details) convert.ComicInfo {
 	join := func(names []string) string { return strings.Join(names, ", ") }
-	source := providerName(d.Provider)
-	if d.Provider == "gcd" {
-		source += " (comics.org, CC BY-SA 4.0)"
+	notes := "Metadados de " + providerName(d.Provider)
+	switch d.Provider {
+	case "gcd":
+		notes += " (comics.org, CC BY-SA 4.0), aplicados pela QuadrinhoTeca."
+	case "manual":
+		notes = "Metadados preenchidos à mão na QuadrinhoTeca."
+	default:
+		notes += ", aplicados pela QuadrinhoTeca."
 	}
 	return convert.ComicInfo{
 		Title: d.Title, Series: d.Series, Number: d.Number, Count: g.Count, Summary: d.Summary,
 		Year: d.Year, Month: d.Month, Writer: join(d.Writers), Penciller: join(d.Pencillers), Inker: join(d.Inkers),
 		Colorist: join(d.Colorists), Letterer: join(d.Letterers), CoverArtist: join(d.CoverArtists),
 		Publisher: d.Publisher, Web: d.URL, LanguageISO: d.Language,
-		Notes: "Metadados de " + source + ", aplicados pela QuadrinhoTeca.",
+		Notes: notes,
 	}
 }
 

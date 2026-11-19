@@ -16,6 +16,7 @@ import (
 	"github.com/edu-ricardo/selfconvertercomic/internal/catalog"
 	"github.com/edu-ricardo/selfconvertercomic/internal/convert"
 	"github.com/edu-ricardo/selfconvertercomic/internal/db"
+	"github.com/edu-ricardo/selfconvertercomic/internal/dupes"
 	"github.com/edu-ricardo/selfconvertercomic/internal/identify"
 	"github.com/edu-ricardo/selfconvertercomic/internal/jobs"
 	"github.com/edu-ricardo/selfconvertercomic/internal/library"
@@ -77,6 +78,8 @@ func newTestServerConn(t *testing.T, version string, roots library.Roots) (*sql.
 		Identifier: &identify.Identifier{DB: conn, Finder: finder, Tasks: tasks.NewStore(conn), Settings: st.Get},
 		Metadata:   finder,
 		DB:         conn,
+		Trash: &dupes.Trash{DB: conn, Libraries: libs,
+			Exclusive: func(_ int64, fn func() error) error { return fn() }},
 		Organizer: &organize.Organizer{DB: conn, Libraries: libs,
 			Exclusive: func(_ int64, fn func() error) error { return fn() }},
 		Runner: jobs.NewRunner(js, st, convert.Converter{}, func(ctx context.Context, id int64) (string, string, error) {

@@ -118,29 +118,53 @@ func (cv *ComicVine) Search(ctx context.Context, key string, g Guess, lim Limits
 		series = append(series, c)
 	}
 	return bestIssues(ctx, g, series, func(ctx context.Context, s Candidate) (*Candidate, error) {
-		raw, err := cv.get(ctx, key, "issues", url.Values{
-			"filter":     {"volume:" + s.SeriesID + ",issue_number:" + g.Number},
-			"field_list": {"id,name,issue_number,cover_date,image,site_detail_url"},
-			"limit":      {"1"},
-		}, lim)
-		if err != nil {
-			return nil, err
-		}
-		var issues []cvIssue
-		if err := json.Unmarshal(raw, &issues); err != nil || len(issues) == 0 {
-			return nil, err
-		}
-		is := issues[0]
-		c := s
-		c.IssueID, c.Number, c.Title, c.URL = strconv.Itoa(is.ID), is.IssueNumber, is.Name, is.SiteURL
-		if y, err := strconv.Atoi(firstN(is.CoverDate, 4)); err == nil {
-			c.Year = y
-		}
-		if is.Image != nil {
-			c.CoverURL = is.Image.MediumURL
-		}
-		return &c, nil
+		return cv.issueIn(ctx, key, s, g.Number, lim)
 	})
+}
+
+// IssueInSeries acha a edição de número number no volume seriesID do ComicVine.
+func (cv *ComicVine) IssueInSeries(ctx context.Context, key, seriesID, number string, lim Limits) (*Candidate, error) {
+	raw, err := cv.get(ctx, key, "volume/4050-"+seriesID, url.Values{
+		"field_list": {"id,name,start_year,count_of_issues,publisher,site_detail_url"},
+	}, lim)
+	if err != nil {
+		return nil, err
+	}
+	var v cvVolume
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, fmt.Errorf("ComicVine: volume: %w", err)
+	}
+	s := Candidate{Provider: "comicvine", SeriesID: seriesID, Series: v.Name, IssueCount: v.CountOfIssues, URL: v.SiteURL}
+	s.Year, _ = strconv.Atoi(v.StartYear)
+	if v.Publisher != nil {
+		s.Publisher = v.Publisher.Name
+	}
+	return cv.issueIn(ctx, key, s, number, lim)
+}
+
+func (cv *ComicVine) issueIn(ctx context.Context, key string, s Candidate, number string, lim Limits) (*Candidate, error) {
+	raw, err := cv.get(ctx, key, "issues", url.Values{
+		"filter":     {"volume:" + s.SeriesID + ",issue_number:" + number},
+		"field_list": {"id,name,issue_number,cover_date,image,site_detail_url"},
+		"limit":      {"1"},
+	}, lim)
+	if err != nil {
+		return nil, err
+	}
+	var issues []cvIssue
+	if err := json.Unmarshal(raw, &issues); err != nil || len(issues) == 0 {
+		return nil, err
+	}
+	is := issues[0]
+	c := s
+	c.IssueID, c.Number, c.Title, c.URL = strconv.Itoa(is.ID), is.IssueNumber, is.Name, is.SiteURL
+	if y, err := strconv.Atoi(firstN(is.CoverDate, 4)); err == nil {
+		c.Year = y
+	}
+	if is.Image != nil {
+		c.CoverURL = is.Image.MediumURL
+	}
+	return &c, nil
 }
 
 func firstN(s string, n int) string {

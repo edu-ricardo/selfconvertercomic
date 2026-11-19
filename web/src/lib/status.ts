@@ -27,7 +27,8 @@ export const metaStatusLabel: Record<MetaStatus, string> = {
 	error: 'Erro na identificação'
 };
 
-export const providerLabel = (p: string) => (p === 'gcd' ? 'GCD' : p === 'comicvine' ? 'ComicVine' : p);
+export const providerLabel = (p: string) =>
+	p === 'gcd' ? 'GCD' : p === 'comicvine' ? 'ComicVine' : p === 'manual' ? 'preenchido à mão' : p;
 
 export const megabytes = (n: number) =>
 	(n / 1024 / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' MB';

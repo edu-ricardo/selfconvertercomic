@@ -126,3 +126,15 @@ Descobertas antes de planejar a E2:
 | Fontes de metadados | **ComicVine** (chave do usuário) para a edição original americana + **API do GCD** para a edição brasileira quando existir. O **Guia dos Quadrinhos sai do escopo** |
 | Acervo | **Misturado**: traduções de fã de edições americanas e digitalizações de edições brasileiras. A app tenta a edição BR (GCD) e cai para a original (ComicVine) |
 | Ordem da E2 | **Metadados primeiro**; a organização usa os dados identificados |
+
+### Rodada 9 — depois de usar a 0.2.0 (2026-11-19)
+
+Pedidos do usuário depois de testar a versão 0.2.0 no Umbrel:
+
+| Tema | Decisão |
+|---|---|
+| Excluir duplicados | Pela tela de Duplicados, **a pedido do usuário** (a app continua sem apagar nada sozinha). Vai para uma **lixeira da app** (pasta oculta na própria biblioteca), com **restaurar** e **esvaziar**; nos HDs exFAT não há lixeira do sistema |
+| Opções de exclusão | **PDFs que já têm CBZ**; **uma pasta inteira** (manter só a cópia de fora dela, ex.: a árvore `arquivospdf/`); **escolher um a um**. Nunca deixa um conteúdo sem nenhuma cópia |
+| Metadados manuais | Formulário para preencher/corrigir os metadados de uma edição; gravados no `ComicInfo.xml` como os das fontes |
+| Botão "Usar este" desativado | Acontecia com candidatos que são só a **série** (arquivo sem número, ex.: `Mark Millar - Guerra Civil (2022)`): passa a pedir o número e buscar a edição nessa série |
+| Metadados por link | Colar o link da página da edição (ou da série + número) no ComicVine ou no GCD e aplicar o que vier de lá |

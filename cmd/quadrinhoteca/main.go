@@ -157,6 +157,7 @@ func main() {
 			Identifier: identifier,
 			Organizer:  &organize.Organizer{DB: conn, Libraries: libraries, Exclusive: scanner.Exclusive},
 			DB:         conn,
+			Trash:      &dupes.Trash{DB: conn, Libraries: libraries, Exclusive: scanner.Exclusive},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

@@ -5,7 +5,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { api, type Candidate, type EditionMeta } from '$lib/api';
+	import { api, type ApplyBody, type Candidate, type EditionMeta } from '$lib/api';
+	import LinkIcon from '@lucide/svelte/icons/link';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { metaStatusLabel, providerLabel } from '$lib/status';
 	import SparklesIcon from '@lucide/svelte/icons/sparkles';
 	import SearchIcon from '@lucide/svelte/icons/search';
@@ -73,16 +75,87 @@
 		}
 	}
 
-	async function use(c: Candidate) {
+	// Aplica e recarrega; as variantes só mudam o que é enviado.
+	async function applyWith(body: ApplyBody, okMessage = 'Metadados aplicados') {
 		busy = true;
 		try {
-			await api.applyMetadata(fileId, { provider: c.provider, issueId: c.issueId, score: c.score });
-			toast.success('Metadados aplicados');
+			await api.applyMetadata(fileId, body);
+			toast.success(okMessage);
 			picking = false;
+			editing = false;
 			found = null;
+			link = '';
 			await onchange();
 		} catch (e) {
 			toast.error(e instanceof Error ? e.message : 'Falha ao aplicar');
+		} finally {
+			busy = false;
+		}
+	}
+
+	const use = (c: Candidate) => applyWith({ provider: c.provider, issueId: c.issueId, score: c.score });
+
+	// Candidato que é só a série: número digitado, ou o do arquivo, ou 1 (encadernados).
+	let seriesNumber = $state<Record<string, string>>({});
+	const useSeries = (c: Candidate) =>
+		applyWith({
+			provider: c.provider,
+			seriesId: c.seriesId,
+			number: seriesNumber[c.provider + c.seriesId] || edition.guess.number || '1'
+		});
+
+	// Link da página da edição (ou da série + número) no ComicVine ou no GCD.
+	let link = $state('');
+	let linkNumber = $state('');
+	const useLink = (event: SubmitEvent) => {
+		event.preventDefault();
+		applyWith({ url: link.trim(), number: linkNumber.trim() });
+	};
+
+	// Preenchimento manual: começa com o que já se sabe.
+	let editing = $state(false);
+	let manual = $state(emptyManual());
+	function emptyManual() {
+		return {
+			series: '', number: '', title: '', year: '', month: '', publisher: '', language: '',
+			writers: '', pencillers: '', inkers: '', colorists: '', letterers: '', coverArtists: '', summary: ''
+		};
+	}
+	function startEditing() {
+		const a = edition.applied;
+		const list = (l: string[] | null | undefined) => (l ?? []).join(', ');
+		manual = {
+			series: a?.series ?? edition.guess.series,
+			number: a?.number ?? edition.guess.number,
+			title: a?.title ?? '',
+			year: String(a?.year || edition.guess.year || ''),
+			month: a?.month ? String(a.month) : '',
+			publisher: a?.publisher ?? '',
+			language: a?.language ?? '',
+			writers: list(a?.writers), pencillers: list(a?.pencillers), inkers: list(a?.inkers),
+			colorists: list(a?.colorists), letterers: list(a?.letterers), coverArtists: list(a?.coverArtists),
+			summary: a?.summary ?? ''
+		};
+		editing = true;
+	}
+	async function saveManual(event: SubmitEvent) {
+		event.preventDefault();
+		const names = (s: string) => s.split(',').map((n) => n.trim()).filter(Boolean);
+		busy = true;
+		try {
+			await api.manualMetadata(fileId, {
+				series: manual.series, number: manual.number, title: manual.title,
+				year: Number(manual.year) || 0, month: Number(manual.month) || 0,
+				publisher: manual.publisher, language: manual.language, summary: manual.summary,
+				writers: names(manual.writers), pencillers: names(manual.pencillers), inkers: names(manual.inkers),
+				colorists: names(manual.colorists), letterers: names(manual.letterers), coverArtists: names(manual.coverArtists)
+			});
+			toast.success('Metadados salvos');
+			editing = false;
+			picking = false;
+			await onchange();
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : 'Falha ao salvar');
 		} finally {
 			busy = false;
 		}
@@ -136,10 +209,14 @@
 				{/each}
 				<span class="text-muted-foreground">Fonte</span>
 				<span>
-					<a href={d.url} target="_blank" rel="noopener" class="inline-flex items-center gap-1 underline">
-						{providerLabel(d.provider)} <ExternalLinkIcon class="size-3" />
-					</a>
-					<span class="text-muted-foreground">· nota {edition.score}</span>
+					{#if d.provider === 'manual'}
+						Preenchido à mão
+					{:else}
+						<a href={d.url} target="_blank" rel="noopener" class="inline-flex items-center gap-1 underline">
+							{providerLabel(d.provider)} <ExternalLinkIcon class="size-3" />
+						</a>
+						<span class="text-muted-foreground">· nota {edition.score}</span>
+					{/if}
 					{#if d.provider === 'gcd'}
 						<span class="text-muted-foreground block text-xs">Dados do Grand Comics Database, licença CC BY-SA 4.0.</span>
 					{/if}
@@ -150,7 +227,53 @@
 			{/if}
 		{/if}
 
+		{#if editing}
+			<form class="grid gap-3" onsubmit={saveManual}>
+				<div class="flex flex-wrap gap-2">
+					<div class="grid min-w-48 flex-1 gap-1.5"><Label for="m-series">Série *</Label><Input id="m-series" bind:value={manual.series} /></div>
+					<div class="grid w-20 gap-1.5"><Label for="m-number">Número</Label><Input id="m-number" bind:value={manual.number} /></div>
+					<div class="grid w-24 gap-1.5"><Label for="m-year">Ano</Label><Input id="m-year" inputmode="numeric" bind:value={manual.year} /></div>
+					<div class="grid w-16 gap-1.5"><Label for="m-month">Mês</Label><Input id="m-month" inputmode="numeric" bind:value={manual.month} /></div>
+				</div>
+				<div class="flex flex-wrap gap-2">
+					<div class="grid min-w-48 flex-1 gap-1.5"><Label for="m-title">Título</Label><Input id="m-title" bind:value={manual.title} /></div>
+					<div class="grid min-w-40 flex-1 gap-1.5"><Label for="m-pub">Editora</Label><Input id="m-pub" bind:value={manual.publisher} /></div>
+					<div class="grid w-20 gap-1.5"><Label for="m-lang">Idioma</Label><Input id="m-lang" placeholder="pt" bind:value={manual.language} /></div>
+				</div>
+				<div class="grid gap-2 sm:grid-cols-2">
+					{#each [['writers', 'Roteiro'], ['pencillers', 'Desenho'], ['inkers', 'Arte-final'], ['colorists', 'Cores'], ['letterers', 'Letras'], ['coverArtists', 'Capa']] as [key, label] (key)}
+						<div class="grid gap-1.5">
+							<Label for="m-{key}">{label}</Label>
+							<Input id="m-{key}" placeholder="nomes separados por vírgula" bind:value={manual[key as keyof typeof manual]} />
+						</div>
+					{/each}
+				</div>
+				<div class="grid gap-1.5">
+					<Label for="m-summary">Sinopse</Label>
+					<textarea id="m-summary" rows="4" class="border-input bg-background rounded-md border px-3 py-2 text-sm" bind:value={manual.summary}></textarea>
+				</div>
+				<div class="flex gap-2">
+					<Button type="submit" disabled={busy || !manual.series.trim()}><CheckIcon /> Salvar</Button>
+					<Button type="button" variant="ghost" onclick={() => (editing = false)}>Cancelar</Button>
+				</div>
+			</form>
+		{/if}
+
 		{#if picking}
+			<form class="flex flex-wrap items-end gap-2" onsubmit={useLink}>
+				<div class="grid min-w-48 flex-1 gap-1.5">
+					<Label for="q-link">Link da edição no ComicVine ou no GCD</Label>
+					<Input id="q-link" placeholder="https://www.comics.org/issue/… ou https://comicvine.gamespot.com/…/4000-…/" bind:value={link} />
+				</div>
+				<div class="grid w-20 gap-1.5">
+					<Label for="q-link-number">Número</Label>
+					<Input id="q-link-number" placeholder="se série" bind:value={linkNumber} />
+				</div>
+				<Button type="submit" variant="outline" disabled={busy || !link.trim()}>
+					<LinkIcon /> Usar link
+				</Button>
+			</form>
+
 			<form class="flex flex-wrap items-end gap-2" onsubmit={search}>
 				<div class="grid min-w-48 flex-1 gap-1.5">
 					<Label for="q-series">Série</Label>
@@ -198,10 +321,23 @@
 								<p class="text-muted-foreground text-xs">
 									{[providerLabel(c.provider), c.publisher, `nota ${c.score}`].filter(Boolean).join(' · ')}
 								</p>
-								<div class="flex flex-wrap gap-1">
-									<Button size="sm" disabled={busy || !c.issueId} onclick={() => use(c)}>
-										<CheckIcon /> Usar este
-									</Button>
+								<div class="flex flex-wrap items-center gap-1">
+									{#if c.issueId}
+										<Button size="sm" disabled={busy} onclick={() => use(c)}>
+											<CheckIcon /> Usar este
+										</Button>
+									{:else}
+										<!-- Só a série (o arquivo não tem número): escolha qual edição dela. -->
+										<Input
+											class="h-8 w-16"
+											aria-label="Número da edição em {c.series}"
+											placeholder="nº"
+											bind:value={seriesNumber[c.provider + c.seriesId]}
+										/>
+										<Button size="sm" disabled={busy} onclick={() => useSeries(c)}>
+											<CheckIcon /> Usar #{seriesNumber[c.provider + c.seriesId] || '1'}
+										</Button>
+									{/if}
 									<Button size="sm" variant="ghost" href={c.url} target="_blank" rel="noopener">
 										<ExternalLinkIcon /> Ver
 									</Button>
@@ -220,7 +356,12 @@
 		</Button>
 		{#if !picking}
 			<Button type="button" variant="ghost" size="sm" onclick={() => (picking = true)}>
-				<SearchIcon /> Escolher manualmente
+				<SearchIcon /> Buscar ou colar link
+			</Button>
+		{/if}
+		{#if !editing}
+			<Button type="button" variant="ghost" size="sm" onclick={startEditing}>
+				<PencilIcon /> Preencher à mão
 			</Button>
 		{/if}
 	</Card.Footer>

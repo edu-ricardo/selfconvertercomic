@@ -164,7 +164,7 @@ export interface Candidate {
 }
 
 export interface MetadataDetails {
-	provider: 'gcd' | 'comicvine';
+	provider: 'gcd' | 'comicvine' | 'manual';
 	issueId: string;
 	url: string;
 	series: string;
@@ -183,6 +183,12 @@ export interface MetadataDetails {
 	summary: string;
 	coverUrl: string;
 }
+
+/** Como aplicar: candidato da lista, série + número, ou link (edição, ou série + número). */
+export type ApplyBody =
+	| { provider: string; issueId: string; score: number }
+	| { provider: string; seriesId: string; number: string }
+	| { url: string; number: string };
 
 export interface EditionMeta {
 	id: number;
@@ -279,6 +285,17 @@ export interface DuplicatesReport {
 	more: boolean;
 }
 
+export interface TrashItem {
+	id: number;
+	libraryId: number;
+	libraryName: string;
+	relPath: string;
+	size: number;
+	format: Format;
+	reason: string;
+	deletedAt: string;
+}
+
 export interface BackupInfo {
 	name: string;
 	size: number;
@@ -308,6 +325,11 @@ export const api = {
 	organizeUndo: (op: number) => request<OrganizeOp>('POST', `/api/organize/${op}/undo`),
 
 	duplicates: () => request<DuplicatesReport>('GET', '/api/duplicates'),
+	convertedPdfs: () => request<DuplicateFile[]>('GET', '/api/duplicates/converted-pdfs'),
+	listTrash: () => request<TrashItem[]>('GET', '/api/trash'),
+	moveToTrash: (fileIds: number[], reason: string) => request<{ moved: number }>('POST', '/api/trash', { fileIds, reason }),
+	restoreTrash: (ids: number[]) => request<{ restored: number }>('POST', '/api/trash/restore', { ids }),
+	emptyTrash: () => request<{ deleted: number }>('POST', '/api/trash/empty', { all: true }),
 
 	listBackups: () => request<BackupInfo[]>('GET', '/api/backups'),
 	createBackup: () => request<BackupInfo>('POST', '/api/backups'),
@@ -339,8 +361,9 @@ export const api = {
 			'GET',
 			`/api/files/${id}/candidates?${new URLSearchParams(q)}`
 		),
-	applyMetadata: (id: number, c: { provider: string; issueId: string; score: number }) =>
-		request<EditionMeta>('POST', `/api/files/${id}/metadata`, c),
+	applyMetadata: (id: number, body: ApplyBody) => request<EditionMeta>('POST', `/api/files/${id}/metadata`, body),
+	manualMetadata: (id: number, d: Partial<MetadataDetails>) =>
+		request<EditionMeta>('PUT', `/api/files/${id}/metadata`, d),
 	identifyLibrary: (id: number) => request<{ queued: number }>('POST', `/api/libraries/${id}/identify`),
 	identifySeries: (library: number, series: string) =>
 		request<{ queued: number }>(
