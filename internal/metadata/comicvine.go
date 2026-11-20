@@ -142,9 +142,18 @@ func (cv *ComicVine) IssueInSeries(ctx context.Context, key, seriesID, number st
 	return cv.issueIn(ctx, key, s, number, lim)
 }
 
+// issueIn procura a edição de número number no volume (nil se ele não tiver). Sem número, a edição
+// única do volume (nil se ele tiver mais de uma).
 func (cv *ComicVine) issueIn(ctx context.Context, key string, s Candidate, number string, lim Limits) (*Candidate, error) {
+	filter := "volume:" + s.SeriesID + ",issue_number:" + number
+	if number == "" {
+		if s.IssueCount != 1 {
+			return nil, nil
+		}
+		filter = "volume:" + s.SeriesID
+	}
 	raw, err := cv.get(ctx, key, "issues", url.Values{
-		"filter":     {"volume:" + s.SeriesID + ",issue_number:" + number},
+		"filter":     {filter},
 		"field_list": {"id,name,issue_number,cover_date,image,site_detail_url"},
 		"limit":      {"1"},
 	}, lim)
