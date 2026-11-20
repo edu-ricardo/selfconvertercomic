@@ -94,10 +94,17 @@ func gcdSeriesCandidate(s gcdSeries) Candidate {
 	return c
 }
 
-// issueIn procura a edição de número number na série (nil se ela não tiver).
+// issueIn procura a edição de número number na série (nil se ela não tiver). Sem número, a edição
+// única da série (nil se ela tiver mais de uma).
 func (g *GCD) issueIn(ctx context.Context, ser gcdSeries, s Candidate, number string, lim Limits) (*Candidate, error) {
 	issueURL := ""
+	if number == "" && len(ser.Issues) == 1 {
+		issueURL = ser.Issues[0]
+	}
 	for i, d := range ser.Descriptors {
+		if number == "" {
+			break
+		}
 		if f := strings.Fields(d); len(f) > 0 && trimZeros(f[0]) == number && i < len(ser.Issues) {
 			issueURL = ser.Issues[i]
 			break

@@ -95,14 +95,12 @@
 
 	const use = (c: Candidate) => applyWith({ provider: c.provider, issueId: c.issueId, score: c.score });
 
-	// Candidato que é só a série: número digitado, ou o do arquivo, ou 1 (encadernados).
+	// Candidato que é só a série: número digitado, ou o do arquivo; sem nenhum (encadernado, edição
+	// especial), o servidor usa a edição única da série.
 	let seriesNumber = $state<Record<string, string>>({});
+	const seriesNumberOf = (c: Candidate) => (seriesNumber[c.provider + c.seriesId] || edition.guess.number || '').trim();
 	const useSeries = (c: Candidate) =>
-		applyWith({
-			provider: c.provider,
-			seriesId: c.seriesId,
-			number: seriesNumber[c.provider + c.seriesId] || edition.guess.number || '1'
-		});
+		applyWith({ provider: c.provider, seriesId: c.seriesId, number: seriesNumberOf(c) });
 
 	// Link da página da edição (ou da série + número) no ComicVine ou no GCD.
 	let link = $state('');
@@ -335,7 +333,7 @@
 											bind:value={seriesNumber[c.provider + c.seriesId]}
 										/>
 										<Button size="sm" disabled={busy} onclick={() => useSeries(c)}>
-											<CheckIcon /> Usar #{seriesNumber[c.provider + c.seriesId] || '1'}
+											<CheckIcon /> {seriesNumberOf(c) ? `Usar #${seriesNumberOf(c)}` : 'Usar edição única'}
 										</Button>
 									{/if}
 									<Button size="sm" variant="ghost" href={c.url} target="_blank" rel="noopener">

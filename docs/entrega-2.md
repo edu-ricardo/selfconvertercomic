@@ -191,6 +191,16 @@ As configurações `metadata.guiaRateSeconds` passam a valer para os provedores 
   volta deixaram os arquivos idênticos; os 3 PDFs com CBZ para a lixeira e "esvaziar" apagou só eles.
   **Bug achado:** sem nenhum duplicado a API devolvia `null` em vez de lista vazia (a tela quebraria).
 
+### M15 — Edição sem número (rodada 10)
+- Encadernado ou edição especial (arquivo sem número): confirmar a série sem informar número usa a edição
+  única dela (GCD: a única de `active_issues`, mesmo com descritor `[nn]`; ComicVine: volume com
+  `count_of_issues` 1, `issues?filter=volume:…`). Série com várias edições continua pedindo o número.
+- Busca sem número: as séries de uma edição só (entre as 3 mais parecidas) já vêm com a edição aberta.
+  Sem número a nota não passa de 80, então nada é aplicado sozinho: vira tarefa para confirmar.
+- A tela não sugere mais "1": o botão vira "Usar edição única" quando não há número.
+- **Verificar:** testes do GCD e do ComicVine (série de uma edição, de várias, busca sem número); o caso
+  real na biblioteca do Umbrel.
+
 ## Fora deste plano
 - **Kavita lendo o HD externo:** ajuste no pacote do Kavita na florencio-store (outro repositório).
 - **Aviso pelo ntfy real:** continua sem teste.

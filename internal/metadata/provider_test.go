@@ -37,6 +37,11 @@ func fakeGCD(t *testing.T, hits *atomic.Int32) *httptest.Server {
 			 "title":"","key_date":"1986-08-12","indicia_publisher":"Editora Abril S.A.",
 			 "cover":"https://files1.comics.org/img/gcd/covers_by_id/989/w400/989158.jpg",
 			 "story_set":[{"type":"cover","title":""},{"type":"comic story","title":"A Guerra Se Inicia"}]}`, base)
+		case "/api/series/90001/": // encadernado: uma edição só, sem número
+			fmt.Fprintf(w, `{"api_url":"%[1]s/series/90001/","name":"Guerra Civil","language":"pt","year_began":2022,
+			  "active_issues":["%[1]s/issue/90002/"],"issue_descriptors":["[nn]"]}`, base)
+		case "/api/issue/90002/":
+			fmt.Fprintf(w, `{"api_url":"%s/issue/90002/","number":"[nn]","key_date":"2022-03-00","indicia_publisher":"Panini Brasil Ltda.","cover":"","story_set":[]}`, base)
 		case "/api/issue/2214216/":
 			fmt.Fprintf(w, `{"api_url":"%s/issue/2214216/","number":"1","key_date":"","indicia_publisher":"Panini Brasil Ltda.","cover":"","story_set":[]}`, base)
 		default:
@@ -67,8 +72,15 @@ func fakeComicVine(t *testing.T, hits *atomic.Int32) *httptest.Server {
 		case "/api/volume/4050-2895/":
 			fmt.Fprint(w, `{"error":"OK","status_code":1,"results":{"id":2895,"name":"Secret Wars","start_year":"1984",
 			 "count_of_issues":12,"publisher":{"name":"Marvel"},"site_detail_url":"https://comicvine.gamespot.com/secret-wars/4050-2895/"}}`)
+		case "/api/volume/4050-777/":
+			fmt.Fprint(w, `{"error":"OK","status_code":1,"results":{"id":777,"name":"Civil War","start_year":"2007",
+			 "count_of_issues":1,"publisher":{"name":"Marvel"},"site_detail_url":"https://comicvine.gamespot.com/civil-war/4050-777/"}}`)
 		case "/api/issues/":
-			if f := r.URL.Query().Get("filter"); f != "volume:2895,issue_number:1" {
+			if f := r.URL.Query().Get("filter"); f == "volume:777" {
+				fmt.Fprint(w, `{"error":"OK","status_code":1,"results":[{"id":7771,"name":"","issue_number":"1","cover_date":"2007-01-01",
+				 "site_detail_url":"https://comicvine.gamespot.com/civil-war-1/4000-7771/"}]}`)
+				return
+			} else if f != "volume:2895,issue_number:1" {
 				t.Errorf("filtro: %s", f)
 			}
 			fmt.Fprint(w, `{"error":"OK","status_code":1,"results":[{"id":31744,"name":"The War Begins","issue_number":"1",
@@ -341,6 +353,43 @@ func TestIssueInSeries(t *testing.T) {
 		t.Errorf("ComicVine: %+v %v", c, err)
 	}
 	if _, err := e.finder.IssueInSeries(ctx, "gcd", "41527", ""); !errors.Is(err, ErrNoIssue) {
-		t.Errorf("sem número: %v", err)
+		t.Errorf("sem número numa série de várias edições: %v", err)
+	}
+	if _, err := e.finder.IssueInSeries(ctx, "comicvine", "2895", ""); !errors.Is(err, ErrNoIssue) {
+		t.Errorf("sem número num volume de várias edições: %v", err)
+	}
+}
+
+// Encadernado ou edição especial (sem número): vale a edição única da série.
+func TestIssueInSeriesWithoutNumber(t *testing.T) {
+	e := newEnv(t)
+	e.cfg.Metadata.RateSeconds = 0
+	ctx := context.Background()
+	c, err := e.finder.IssueInSeries(ctx, "gcd", "90001", "")
+	if err != nil || c.IssueID != "90002" || c.Number != "[nn]" || c.Series != "Guerra Civil" || c.Year != 2022 {
+		t.Errorf("GCD: %+v %v", c, err)
+	}
+	c, err = e.finder.IssueInSeries(ctx, "comicvine", "777", " ")
+	if err != nil || c.IssueID != "7771" || c.Series != "Civil War" {
+		t.Errorf("ComicVine: %+v %v", c, err)
+	}
+}
+
+// Busca sem número: a série de uma edição só já vem com a edição (dá para usar direto); as outras,
+// só a série.
+func TestSearchWithoutNumberOpensSingleIssue(t *testing.T) {
+	e := newEnv(t)
+	e.cfg.Metadata.RateSeconds = 0
+	e.cfg.Metadata.ComicVineAPIKey = ""
+	res, err := e.finder.Search(context.Background(), Guess{Series: "Guerras Secretas"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, c := range res.Candidates {
+		got[c.SeriesID] = c.IssueID
+	}
+	if got["171534"] != "2214216" || got["41527"] != "" {
+		t.Errorf("candidatos: %+v", res.Candidates)
 	}
 }

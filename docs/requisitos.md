@@ -138,3 +138,9 @@ Pedidos do usuário depois de testar a versão 0.2.0 no Umbrel:
 | Metadados manuais | Formulário para preencher/corrigir os metadados de uma edição; gravados no `ComicInfo.xml` como os das fontes |
 | Botão "Usar este" desativado | Acontecia com candidatos que são só a **série** (arquivo sem número, ex.: `Mark Millar - Guerra Civil (2022)`): passa a pedir o número e buscar a edição nessa série |
 | Metadados por link | Colar o link da página da edição (ou da série + número) no ComicVine ou no GCD e aplicar o que vier de lá |
+
+### Rodada 10 — depois de usar a 0.3.0 (2026-11-19)
+
+| Tema | Decisão |
+|---|---|
+| Encadernados e edições especiais | Não têm número: a fonte acha a série, mas confirmar pedia um número (o padrão "1" não casa com o "[nn]" do GCD). Sem número, vale a **edição única da série**; se a série tiver várias edições, continua pedindo o número. Na busca sem número, a série de uma edição só já vem com a edição (botão "Usar este") |

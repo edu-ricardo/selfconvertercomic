@@ -13,7 +13,8 @@ import (
 const seriesToOpen = 3
 
 // bestIssues ordena as séries pela semelhança com g e, nas seriesToOpen melhores, busca a edição de
-// número g.Number com issue. Sem número, devolve só as séries (candidatos sem IssueID).
+// número g.Number com issue. Sem número (encadernado, edição especial), só as séries de uma edição
+// têm a edição aberta; as outras voltam como candidatos sem IssueID.
 func bestIssues(ctx context.Context, g Guess, series []Candidate,
 	issue func(context.Context, Candidate) (*Candidate, error)) ([]Candidate, error) {
 	for i := range series {
@@ -21,7 +22,21 @@ func bestIssues(ctx context.Context, g Guess, series []Candidate,
 	}
 	sort.SliceStable(series, func(i, j int) bool { return series[i].Score > series[j].Score })
 	if g.Number == "" {
-		return series[:min(len(series), seriesToOpen)], nil
+		out := series[:min(len(series), seriesToOpen)]
+		for i, s := range out {
+			if s.IssueCount != 1 {
+				continue
+			}
+			c, err := issue(ctx, s)
+			if err != nil {
+				return out, err
+			}
+			if c != nil {
+				c.Score = Score(g, *c)
+				out[i] = *c
+			}
+		}
+		return out, nil
 	}
 	var out []Candidate
 	for _, s := range series[:min(len(series), seriesToOpen)] {

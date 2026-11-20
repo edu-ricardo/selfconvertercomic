@@ -19,7 +19,7 @@ type Link struct {
 // ErrLink indica endereço que não é de edição/série do ComicVine nem do GCD.
 var ErrLink = errors.New("link não reconhecido: use o endereço da página da edição (ou da série) no ComicVine ou no GCD")
 
-// ErrNoIssue indica que a série não tem a edição pedida.
+// ErrNoIssue indica que a série não tem a edição pedida (ou, sem número, que tem mais de uma).
 var ErrNoIssue = errors.New("essa série não tem a edição com esse número")
 
 var (
@@ -57,13 +57,12 @@ func ParseLink(raw string) (Link, error) {
 }
 
 // IssueInSeries acha a edição de número number numa série já conhecida de uma fonte (candidato que é
-// só a série, ou link de série).
+// só a série, ou link de série). Sem número, serve a edição única da série (encadernado, especial).
 func (f *Finder) IssueInSeries(ctx context.Context, provider, seriesID, number string) (Candidate, error) {
 	number = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(number), "#"))
-	if number == "" {
-		return Candidate{}, fmt.Errorf("%w: informe o número", ErrNoIssue)
+	if number != "" {
+		number = trimZeros(number)
 	}
-	number = trimZeros(number)
 	s, err := f.Settings(ctx)
 	if err != nil {
 		return Candidate{}, err
@@ -83,6 +82,9 @@ func (f *Finder) IssueInSeries(ctx context.Context, provider, seriesID, number s
 	}
 	if err != nil {
 		return Candidate{}, err
+	}
+	if c == nil && number == "" {
+		return Candidate{}, fmt.Errorf("%w: a série tem mais de uma edição, informe o número", ErrNoIssue)
 	}
 	if c == nil {
 		return Candidate{}, fmt.Errorf("%w (#%s)", ErrNoIssue, number)
